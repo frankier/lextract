@@ -1,0 +1,7 @@
+/docs/_build/
+/docs/_autosummary/
+__pycache__/
+/.pytest_cache/
+/dist/
+/lextract.egg-info/
+/build/
