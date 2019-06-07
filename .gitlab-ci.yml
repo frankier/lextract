@@ -1,0 +1,27 @@
+image: docker:latest
+
+stages:
+  - build
+  - test
+
+variables:
+  DOCKER_DRIVER: overlay2
+
+services:
+- docker:dind
+
+before_script:
+  - docker info || true
+  - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY || true
+
+test:nose2:
+  stage: test
+  image: $CI_REGISTRY/frankier/wikiparse:latest
+  script:
+    - ./run_tests.sh
+
+test:flake8:
+  stage: test
+  image: $CI_REGISTRY/frankier/wikiparse:latest
+  script:
+    - flake8
