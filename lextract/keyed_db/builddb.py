@@ -2,14 +2,23 @@ import click
 import heapq
 from more_itertools import groupby_transform
 from sqlalchemy import select
+from itertools import chain
 
-from wikiparse.utils.db import get_session, insert, insert_get_id
 from wordfreq import word_frequency
 from lextract.keyed_db.tables import metadata, key_lemma as key_lemma_t, word as word_t, subword as subword_t
 from wikiparse.tables import headword as headword_t
+from wikiparse.utils.db import get_session, insert, insert_get_id
+from wikiparse.parse_assoc import proc_assoc
 from lextract.aho_corasick.fin import FIN_SPACE
 from operator import itemgetter
 from .utils import fi_lemmatise
+from .queries import wiktionary_gram_query
+from wikiparse.gram_words import CASES
+from finntk.data.omorfi_normseg import CASE_NAME_MAP
+from finntk.data.wiktionary_normseg import CASE_NORMSEG_MAP
+
+
+WIKTIONARY_TO_OMORFI_CASE_MAP = {v: k for k, v in CASE_NAME_MAP.items()}
 
 
 def null_lemmatise(x):
@@ -47,13 +56,18 @@ def index_word(word, lemmatise=null_lemmatise):
     return word_type, key_idx, subwords
 
 
-def insert_wordlist(session, words, lemmatise=null_lemmatise):
+def index_wordlist(words, lemmatise=null_lemmatise):
     for word, sources in words:
         res = index_word(word, lemmatise)
         if res is None:
             continue
         word_type, key_idx, subwords = res
-        word_id = insert_get_id(session, word_t, key_idx=key_idx, form=" ".join(word), type=word_type, sources=sources, payload={})
+        yield " ".join(word), sources, word_type, key_idx, subwords
+
+
+def insert_indexed(session, indexed, lemmatise=null_lemmatise):
+    for form, sources, word_type, key_idx, subwords in indexed:
+        word_id = insert_get_id(session, word_t, key_idx=key_idx, form=form, type=word_type, sources=sources, payload={})
         key_lemmas = list(subwords[key_idx][1].keys())
         assert len(key_lemmas) >= 1
         for lemma in key_lemmas:
@@ -82,6 +96,55 @@ def wiktionary_wordlist(session):
     return all_lemmas
 
 
+def wiktionary_frames(session, lemmatise=fi_lemmatise):
+
+    def headword_subword():
+        return (word, lemmatise(word))
+
+    grams = session.execute(wiktionary_gram_query())
+    for word, sense_id, pos, extra in grams:
+        if pos != "Verb":
+            # XXX: Possibly grammatical notes for other POSs could be taken
+            # into account later. How many words actually have them?
+            continue
+        form_bits = []
+        subwords = []
+        headword_idx = None
+        for cmd, payload in proc_assoc(extra["raw_defn"]):
+            if cmd == "headword":
+                assert headword_idx is None
+                headword_idx = len(subwords)
+                subwords.append(headword_subword())
+                form_bits.append(word)
+            elif cmd in ("subj", "obj"):
+                if payload in CASES:
+                    mapped_case = WIKTIONARY_TO_OMORFI_CASE_MAP.get(payload)
+                    if mapped_case is not None:
+                        subwords.append(payload, {None: {(("case", mapped_case),)}})
+                        mapped_normseg = CASE_NORMSEG_MAP.get(payload)
+                        if mapped_normseg is not None:
+                            form_bits.append("___" + mapped_normseg)
+                else:
+                    # TODO: deal with ASSOC_POS and `direct object`
+                    pass
+            elif cmd == "verb":
+                # TODO: Use transitive/intransitive on headword as an additional clue
+                # TODO: Add requirement for verb that is not the headword
+                pass
+            elif cmd == "assoc":
+                subwords.append((payload, lemmatise(payload)))
+                form_bits.append(payload)
+        if headword_idx is not None:
+            headword_idx = 0
+            subwords.insert(0, headword_subword())
+            form_bits.prepend(word)
+        if len(subwords) < 2:
+            continue
+        # XXX: Headword may not always be the best choice of key
+        # -- but at least it always has a lemma!
+        yield " ".join(form_bits), ("wiktionary_frames",), "frame", headword_idx, subwords
+
+
 def combine_wordlists(*wordlist_source_pairs):
     merged = heapq.merge((((word, source) for word in word_list) for word_list, source in wordlist_source_pairs))
     return groupby_transform(merged, itemgetter(0), itemgetter(1))
@@ -98,6 +161,7 @@ def add_keyed_words():
     """
     session = get_session()
     metadata.create_all(session().get_bind().engine)
-    with click.progressbar(wordlists(session), label="Inserting word keys") as words:
-        insert_wordlist(session, words, fi_lemmatise)
+    indexed = chain(index_wordlist(wordlists(session)), wiktionary_frames(session))
+    with click.progressbar(indexed, label="Inserting word keys") as indexed:
+        insert_indexed(session, indexed, fi_lemmatise)
     session.commit()

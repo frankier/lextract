@@ -90,6 +90,16 @@ def match_any(matcher_lemma_feats, cand_lemma_feats):
         cand_feats = cand_lemma_feats[match_lemma]
         if any_subset(match_feats, cand_feats):
             return True
+    if None in matcher_lemma_feats:
+        if any_subset(
+            matcher_lemma_feats[None],
+            (
+                cand_feats
+                for cand_feats_list in cand_lemma_feats.values()
+                for cand_feats in cand_lemma_feats
+            )
+        ):
+            return True
 
     return False
 

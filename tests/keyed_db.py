@@ -4,7 +4,7 @@ from sqlalchemy import select, func
 import conllu
 
 from lextract.keyed_db.utils import fi_lemmatise
-from lextract.keyed_db.builddb import insert_wordlist
+from lextract.keyed_db.builddb import index_wordlist, insert_indexed
 from lextract.keyed_db.extract import extract_deps, extract_toks
 from lextract.keyed_db.tables import metadata, word as word_t
 
@@ -23,7 +23,13 @@ TEST_WORDS = [
 def create_test_db(db_path):
     session = get_session(db_path)
     metadata.create_all(session().get_bind().engine)
-    insert_wordlist(session, [(w, ["test"]) for w in TEST_WORDS], fi_lemmatise)
+    insert_indexed(
+        session,
+        index_wordlist(
+            [(w, ["test"]) for w in TEST_WORDS],
+            fi_lemmatise
+        )
+    )
     return session
 
 
