@@ -157,7 +157,7 @@ def wordlists(session):
 @click.command()
 def add_keyed_words():
     """
-    Add table of frequencies to DB
+    Index multiwords/inflections/frames into database
     """
     session = get_session()
     metadata.create_all(session().get_bind().engine)
