@@ -14,7 +14,7 @@ opencc = "^0.2"
 finntk = ">=0.0.40"
 conllu = "^1.1"
 hfst = {version = "3.15.0.0b0",allows-prereleases = true}
-wikiparse = {git = "https://github.com/frankier/wikiparse.git", commit = "2e7c5196471f0b60914eb859919623a5c1f44b8f"}
+wikiparse = {git = "https://github.com/frankier/wikiparse.git", commit = "d61cfff97625ef26cbb76f070e179f2e646ccc4c"}
 
 [tool.poetry.dev-dependencies]
 flake8 = "^3.5.0"
