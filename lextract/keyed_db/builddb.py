@@ -160,12 +160,12 @@ def wiktionary_frames(session, lemmatise=fi_lemmatise):
 
 
 def combine_wordlists(*wordlist_source_pairs):
-    merged = heapq.merge((((word, source) for word in word_list) for word_list, source in wordlist_source_pairs))
+    merged = heapq.merge(((word, source) for word_list, source in wordlist_source_pairs for word in word_list))
     return groupby_transform(merged, itemgetter(0), itemgetter(1))
 
 
 def wordlists(session):
-    return combine_wordlists((wordnet_wordlist, "wordnet"), (lambda: wiktionary_wordlist(session), "wiktionary"))
+    return combine_wordlists((wordnet_wordlist(), "wordnet"), (wiktionary_wordlist(session), "wiktionary"))
 
 
 @click.command()
