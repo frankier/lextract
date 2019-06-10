@@ -61,5 +61,4 @@ def wiktionary_gram_query():
             )
         ).order_by(
             headword.c.name,
-            word_sense.c.extra,
         )
