@@ -5,3 +5,5 @@ __pycache__/
 /dist/
 /lextract.egg-info/
 /build/
+*.pyc
+/pip-wheel-metadata/
