@@ -63,12 +63,14 @@ def index_wordlist(words, lemmatise=null_lemmatise):
         if res is None:
             continue
         word_type, key_idx, subwords = res
-        yield " ".join(word), sources, word_type, key_idx, subwords
+        yield " ".join(word), list(sources), word_type, key_idx, subwords, None
 
 
 def insert_indexed(session, indexed, lemmatise=null_lemmatise):
-    for form, sources, word_type, key_idx, subwords in indexed:
-        word_id = insert_get_id(session, word_t, key_idx=key_idx, form=form, type=word_type, sources=sources, payload={})
+    for form, sources, word_type, key_idx, subwords, payload in indexed:
+        if payload is None:
+            payload = {}
+        word_id = insert_get_id(session, word_t, key_idx=key_idx, form=form, type=word_type, sources=sources, payload=payload)
         key_lemmas = list(subwords[key_idx][1].keys())
         assert len(key_lemmas) >= 1
         for lemma in key_lemmas:
@@ -145,7 +147,16 @@ def wiktionary_frames(session, lemmatise=fi_lemmatise):
             continue
         # XXX: Headword may not always be the best choice of key
         # -- but at least it always has a lemma!
-        yield " ".join(form_bits), ("wiktionary_frames",), "frame", headword_idx, subwords
+        yield (
+            " ".join(form_bits),
+            ("wiktionary_frames",),
+            "frame",
+            headword_idx,
+            subwords, {
+                "type": "wiktionary_frame",
+                "sense_id": sense_id,
+            }
+        )
 
 
 def combine_wordlists(*wordlist_source_pairs):
