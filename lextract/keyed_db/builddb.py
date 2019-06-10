@@ -11,6 +11,7 @@ from wikiparse.utils.db import get_session, insert, insert_get_id
 from wikiparse.parse_assoc import proc_assoc
 from lextract.aho_corasick.fin import FIN_SPACE
 from operator import itemgetter
+from .consts import WILDCARD
 from .utils import fi_lemmatise
 from .queries import wiktionary_gram_query
 from wikiparse.gram_words import CASES
@@ -125,7 +126,7 @@ def wiktionary_frames(session, lemmatise=fi_lemmatise):
                 if payload in CASES:
                     mapped_case = WIKTIONARY_TO_OMORFI_CASE_MAP.get(payload)
                     if mapped_case is not None:
-                        subwords.append(payload, {None: {(("case", mapped_case),)}})
+                        subwords.append((payload, {WILDCARD: {(("case", mapped_case.upper()),)}}))
                         mapped_normseg = CASE_NORMSEG_MAP.get(payload)
                         if mapped_normseg is not None:
                             form_bits.append("___" + mapped_normseg)

@@ -1,6 +1,7 @@
 from typing import List
 from boltons.dictutils import FrozenDict
 
+from .consts import WILDCARD
 from .utils import fi_lemmatise
 from lextract.keyed_db.tables import key_lemma as key_lemma_t, word as word_t, subword as subword_t
 from .queries import key_lemmas_query, word_subwords_query
@@ -90,13 +91,13 @@ def match_any(matcher_lemma_feats, cand_lemma_feats):
         cand_feats = cand_lemma_feats[match_lemma]
         if any_subset(match_feats, cand_feats):
             return True
-    if None in matcher_lemma_feats:
+    if WILDCARD in matcher_lemma_feats:
         if any_subset(
-            matcher_lemma_feats[None],
+            matcher_lemma_feats[WILDCARD],
             (
                 cand_feats
                 for cand_feats_list in cand_lemma_feats.values()
-                for cand_feats in cand_lemma_feats
+                for cand_feats in cand_feats_list
             )
         ):
             return True
