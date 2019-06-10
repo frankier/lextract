@@ -105,7 +105,9 @@ def wiktionary_wordlist(session):
 def wiktionary_frames(session, lemmatise=fi_lemmatise):
 
     def headword_subword():
-        return (word, lemmatise(word))
+        # At the moment the headword should always be in lemma form
+        # return (word, lemmatise(word))
+        return (word, {word: {()}})
 
     grams = session.execute(wiktionary_gram_query())
     for word, sense_id, pos, extra in grams:
