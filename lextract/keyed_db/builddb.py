@@ -139,10 +139,10 @@ def wiktionary_frames(session, lemmatise=fi_lemmatise):
             elif cmd == "assoc":
                 subwords.append((payload, lemmatise(payload)))
                 form_bits.append(payload)
-        if headword_idx is not None:
+        if headword_idx is None:
             headword_idx = 0
             subwords.insert(0, headword_subword())
-            form_bits.prepend(word)
+            form_bits.insert(0, word)
         if len(subwords) < 2:
             continue
         # XXX: Headword may not always be the best choice of key
