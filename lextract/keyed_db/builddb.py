@@ -16,6 +16,7 @@ from .queries import wiktionary_gram_query
 from wikiparse.gram_words import CASES
 from finntk.data.omorfi_normseg import CASE_NAME_MAP
 from finntk.data.wiktionary_normseg import CASE_NORMSEG_MAP
+from finntk.wordnet import has_abbrv
 
 
 WIKTIONARY_TO_OMORFI_CASE_MAP = {v: k for k, v in CASE_NAME_MAP.items()}
@@ -88,9 +89,11 @@ def wordnet_wordlist():
 
 
 def wiktionary_wordlist(session):
-    headwords = session.execute(select([headword_t.c.name]).select_from(headword_t.order_by(headword_t.c.name)))
+    headwords = session.execute(select([headword_t.c.name]).select_from(headword_t).order_by(headword_t.c.name))
     all_lemmas = []
-    for word in headwords:
+    for (word,) in headwords:
+        if has_abbrv(word):
+            continue
         all_lemmas.append(word.split(" "))
     all_lemmas.sort()
     return all_lemmas
