@@ -90,7 +90,7 @@ def match_any(matcher_lemma_feats, cand_lemma_feats):
             continue
         cand_feats = cand_lemma_feats[match_lemma]
         if any_subset(match_feats, cand_feats):
-            return True
+            return True, False
     if WILDCARD in matcher_lemma_feats:
         if any_subset(
             matcher_lemma_feats[WILDCARD],
@@ -100,30 +100,86 @@ def match_any(matcher_lemma_feats, cand_lemma_feats):
                 for cand_feats in cand_feats_list
             )
         ):
-            return True
+            return True, True
 
-    return False
+    return False, None
 
 
-def extract_toks(session, surfs: List[str]):
+def extract_toks(session, surfs: List[str], extend_wildcards=True):
     lemma_map, all_lemma_feats = index_sentence(surfs)
     key_lemmas, words = get_matchers(session, lemma_map)
     for lemma_idx, key_lemma, word in iter_match_cands(session, lemma_map, all_lemma_feats):
-        match_start = lemma_idx - word["key_idx"]
-        # Bounds check on match start and end
-        if match_start < 0 or match_start + len(word["subwords"]) > len(all_lemma_feats):
-            continue
         # Check lemma and feats for other lemmas
-        all_match = True
-        for idx, (subword_idx, _, matcher_lemma_feats) in enumerate(word["subwords"]):
-            assert idx == subword_idx
-            if subword_idx == word["key_idx"]:
-                continue
-            if not match_any(matcher_lemma_feats, all_lemma_feats[match_start + subword_idx]):
-                all_match = False
-                break
-        if all_match:
-            yield match_start, word
+        subwords = list(enumerate(word["subwords"]))
+        left_matches = select_tok_step(
+            lambda n: n - 1,
+            extend_wildcards,
+            all_lemma_feats,
+            subwords,
+            lemma_idx - 1,
+            word["key_idx"] - 1,
+            FrozenDict(),
+        )
+        if not left_matches:
+            continue
+        right_matches = select_tok_step(
+            lambda n: n + 1,
+            extend_wildcards,
+            all_lemma_feats,
+            subwords,
+            lemma_idx + 1,
+            word["key_idx"] + 1,
+            FrozenDict(),
+        )
+        if not right_matches:
+            continue
+        key_matching = FrozenDict(((word["key_idx"], (lemma_idx,)),))
+        yield (
+            {
+                FrozenDict({**left_matching, **key_matching, **right_matching})
+                for left_matching in left_matches
+                for right_matching in right_matches
+            },
+            word
+        )
+
+
+def select_tok_step(next_idx, extend_wildcards, all_lemma_feats, subwords, word_idx, matcher_idx, matchings):
+    if matcher_idx < 0 or matcher_idx >= len(subwords):
+        return {matchings}
+    if word_idx < 0 or word_idx >= len(all_lemma_feats):
+        return set()
+    idx, (subword_idx, _, matcher_lemma_feats) = subwords[matcher_idx]
+    assert idx == subword_idx
+    matches, is_wildcard_match = match_any(matcher_lemma_feats, all_lemma_feats[word_idx])
+    all_matches = set()
+    if not matches:
+        return all_matches
+    new_matchings = frozendict_append(matchings, matcher_idx, word_idx)
+    if is_wildcard_match and extend_wildcards:
+        all_matches.update(
+            select_tok_step(
+                next_idx,
+                extend_wildcards,
+                all_lemma_feats,
+                subwords,
+                next_idx(word_idx),
+                matcher_idx,
+                new_matchings,
+            )
+        )
+    all_matches.update(
+        select_tok_step(
+            next_idx,
+            extend_wildcards,
+            all_lemma_feats,
+            subwords,
+            next_idx(word_idx),
+            next_idx(matcher_idx),
+            new_matchings,
+        )
+    )
+    return all_matches
 
 
 def make_tree_index(tree, index):
