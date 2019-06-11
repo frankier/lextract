@@ -2,7 +2,7 @@ from typing import List
 from boltons.dictutils import FrozenDict
 
 from .consts import WILDCARD
-from .utils import fi_lemmatise
+from .utils import fi_lemmatise, frozendict_append
 from lextract.keyed_db.tables import key_lemma as key_lemma_t, word as word_t, subword as subword_t
 from .queries import key_lemmas_query, word_subwords_query
 
@@ -156,7 +156,7 @@ def extract_deps(session, sent):
             expand_node(tree_index, lemma_id, frozenset()),
             frozenset((lemma_id,)),
             frozenset((word["key_idx"],)),
-            FrozenDict(((word["key_idx"], lemma_id),))
+            FrozenDict(((word["key_idx"], (lemma_id,)),))
         )
         if matches:
             yield matches, word
@@ -179,8 +179,6 @@ def select_dep_step(all_lemma_feats, tree_index, subwords, cand_set, used_cands,
                     expand_node(tree_index, cand_id, cand_set),
                     used_cands | {cand_id},
                     used_subwords | {subword_idx},
-                    matchings.updated({
-                        subword_idx: cand_id
-                    })
+                    frozendict_append(matchings, subword_idx, cand_id)
                 ))
     return all_matches
