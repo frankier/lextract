@@ -566,6 +566,7 @@ version = "1.1.9.dev1"
 reference = "ca029040175eaba65719e301045dd2c9a821281e"
 type = "git"
 url = "https://github.com/frankier/pyahocorasick.git"
+
 [[package]]
 category = "main"
 description = "PyBloom: A Probabilistic data structure."
@@ -871,6 +872,7 @@ wordfreq = "^2.2"
 reference = "77946f3ba42b1f488a84f189ced8aeaf2c604a81"
 type = "git"
 url = "https://github.com/frankier/wikiparse.git"
+
 [[package]]
 category = "main"
 description = "wordfreq is a Python library for looking up the frequencies of words in many"
@@ -893,7 +895,7 @@ python-versions = ">=2.7"
 version = "0.5.1"
 
 [metadata]
-content-hash = "e0e429c2ccc13fe022825c9174a708bd1104c5feab052292458b4fbc3e669ca9"
+content-hash = "09fbd6697362b8d30c351f957f985c8c22882a5d3e0bab7c010dfa8c9b16f3d2"
 python-versions = "^3.7"
 
 [metadata.hashes]
