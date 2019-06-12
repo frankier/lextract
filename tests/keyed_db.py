@@ -250,3 +250,8 @@ def test_dep_frame_matches(frame_testdb, conll, expected_matches):
     sent = conllu.parse(conll)[0]
     matches = list(extract_deps(frame_testdb, sent))
     assert_dep_matches(matches, expected_matches)
+
+
+def test_longest_matches():
+    from lextract.keyed_db.extract import longest_matches
+    assert longest_matches({fd({0: fs(1), 1: fs(2, 3)}), fd({0: fs(1), 1: fs(2)})}) == {fd({0: fs(1), 1: fs(2, 3)})}

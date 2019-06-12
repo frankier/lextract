@@ -273,3 +273,20 @@ def expand_wildcard_dep(all_lemma_feats, tree_index, wildcard_lemma_feats, cand_
         if not changed:
             break
     return matched, cand_set, used_cands
+
+
+def match_length(matching):
+    return sum((len(tok_idxs) for tok_idxs in matching.values()))
+
+
+def longest_matches(matchings):
+    longest_match_len = 0
+    longest_matches = set()
+    for matching in matchings:
+        cur_match_len = match_length(matching)
+        if cur_match_len > longest_match_len:
+            longest_match_len = cur_match_len
+            longest_matches = {matching}
+        elif cur_match_len == longest_match_len:
+            longest_matches.add(matching)
+    return longest_matches
