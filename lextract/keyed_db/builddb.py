@@ -128,8 +128,8 @@ def wiktionary_frames(session, lemmatise=fi_lemmatise):
                 if payload in CASES:
                     mapped_case = WIKTIONARY_TO_OMORFI_CASE_MAP.get(payload)
                     if mapped_case is not None:
-                        subwords.append((payload, {WILDCARD: {(("case", mapped_case.upper()),)}}))
                         mapped_normseg = CASE_NORMSEG_MAP.get(payload)
+                        subwords.append((mapped_normseg, {WILDCARD: {(("case", mapped_case.upper()),)}}))
                         if mapped_normseg is not None:
                             form_bits.append("___" + mapped_normseg)
                 else:
