@@ -1,3 +1,6 @@
+import contextlib
+import logging
+import click_log
 import click
 import heapq
 from more_itertools import groupby_transform
@@ -18,6 +21,9 @@ from wikiparse.gram_words import CASES
 from finntk.data.omorfi_normseg import CASE_NAME_MAP
 from finntk.data.wiktionary_normseg import CASE_NORMSEG_MAP
 from finntk.wordnet import has_abbrv
+
+logger = logging.getLogger(__name__)
+click_log.basic_config(logger)
 
 
 WIKTIONARY_TO_OMORFI_CASE_MAP = {v: k for k, v in CASE_NAME_MAP.items()}
@@ -69,6 +75,7 @@ def index_wordlist(words, lemmatise=null_lemmatise):
 
 def insert_indexed(session, indexed, lemmatise=null_lemmatise):
     for form, sources, word_type, key_idx, subwords, payload in indexed:
+        logger.info(f"Inserting %s %s from %s", word_type, form, " ".join(sources))
         if payload is None:
             payload = {}
         word_id = insert_get_id(session, word_t, key_idx=key_idx, form=form, type=word_type, sources=sources, payload=payload)
@@ -128,8 +135,8 @@ def wiktionary_frames(session, lemmatise=fi_lemmatise):
                 if payload in CASES:
                     mapped_case = WIKTIONARY_TO_OMORFI_CASE_MAP.get(payload)
                     if mapped_case is not None:
+                        subwords.append((payload, {WILDCARD: {(("case", mapped_case.upper()),)}}))
                         mapped_normseg = CASE_NORMSEG_MAP.get(payload)
-                        subwords.append((mapped_normseg, {WILDCARD: {(("case", mapped_case.upper()),)}}))
                         if mapped_normseg is not None:
                             form_bits.append("___" + mapped_normseg)
                 else:
@@ -167,18 +174,34 @@ def combine_wordlists(*wordlist_source_pairs):
     return groupby_transform(merged, itemgetter(0), itemgetter(1))
 
 
-def wordlists(session):
-    return combine_wordlists((wordnet_wordlist(), "wordnet"), (wiktionary_wordlist(session), "wiktionary"))
+def wordlists(session, wl):
+    wordlist_its = []
+    if "wordnet" in wl:
+        wordlist_its.append((wordnet_wordlist(), "wordnet"))
+    if "wiktionary" in wl:
+        wordlist_its.append((wiktionary_wordlist(session), "wiktionary"))
+    return combine_wordlists(*wordlist_its)
+
+
+WORDLIST_NAMES = ["wordnet", "wiktionary", "wiktionary_frames"]
 
 
 @click.command()
-def add_keyed_words():
+@click.option("--wl", type=click.Choice(WORDLIST_NAMES), multiple=True, default=WORDLIST_NAMES)
+@click_log.simple_verbosity_option(logger)
+def add_keyed_words(wl):
     """
     Index multiwords/inflections/frames into database
     """
     session = get_session()
     metadata.create_all(session().get_bind().engine)
-    indexed = chain(index_wordlist(wordlists(session)), wiktionary_frames(session))
-    with click.progressbar(indexed, label="Inserting word keys") as indexed:
+    indexed = index_wordlist(wordlists(session, wl))
+    if "wiktionary_frames" in wl:
+        indexed = wiktionary_frames(session)
+    if logger.isEnabledFor(logging.INFO):
+        ctx = contextlib.nullcontext(indexed)
+    else:
+        ctx = click.progressbar(indexed, label="Inserting word keys")
+    with ctx as indexed:
         insert_indexed(session, indexed, fi_lemmatise)
     session.commit()
