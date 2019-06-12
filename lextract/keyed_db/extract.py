@@ -133,7 +133,7 @@ def extract_toks(session, surfs: List[str], extend_wildcards=True):
         )
         if not right_matches:
             continue
-        key_matching = FrozenDict(((word["key_idx"], (lemma_idx,)),))
+        key_matching = FrozenDict(((word["key_idx"], frozenset((lemma_idx,))),))
         yield (
             {
                 FrozenDict({**left_matching, **key_matching, **right_matching})
@@ -188,7 +188,7 @@ def make_tree_index(tree, index):
         make_tree_index(child, index)
 
 
-def expand_node(tree_index, lemma_idx, cand_set):
+def expand_node(tree_index, lemma_idx, cand_set=frozenset()):
     node = tree_index[lemma_idx]
     return cand_set | frozenset(
         ([tree_index[node.token["head"]].token["id"]] if node.token["head"] != 0 else []) + 
@@ -200,6 +200,7 @@ def extract_deps(session, sent):
     for idx, tok in enumerate(sent):
         assert tok["id"] == idx + 1
     tree = sent.to_tree()
+    # XXX: Might be good to (optionally?) use feats from conll as-well or instead
     lemma_map, all_lemma_feats = index_sentence((token["form"] for token in sent))
     tree_index = {}
     make_tree_index(tree, tree_index)
@@ -209,16 +210,16 @@ def extract_deps(session, sent):
             all_lemma_feats,
             tree_index,
             word["subwords"],
-            expand_node(tree_index, lemma_id, frozenset()),
+            expand_node(tree_index, lemma_id),
             frozenset((lemma_id,)),
             frozenset((word["key_idx"],)),
-            FrozenDict(((word["key_idx"], (lemma_id,)),))
+            FrozenDict(((word["key_idx"], frozenset((lemma_idx,))),))
         )
         if matches:
             yield matches, word
 
 
-def select_dep_step(all_lemma_feats, tree_index, subwords, cand_set, used_cands, used_subwords, matchings):
+def select_dep_step(all_lemma_feats, tree_index, subwords, cand_set, used_cands, used_subwords, matchings, extend_wildcards=True):
     if len(used_subwords) == len(subwords):
         return {matchings}
     all_matches = set()
@@ -227,14 +228,48 @@ def select_dep_step(all_lemma_feats, tree_index, subwords, cand_set, used_cands,
             assert idx == subword_idx
             if subword_idx in used_subwords:
                 continue
-            if match_any(matcher_lemma_feats, all_lemma_feats[cand_id - 1]):
-                all_matches.update(select_dep_step(
+            matches, is_wildcard_match = match_any(matcher_lemma_feats, all_lemma_feats[cand_id - 1])
+            if not matches:
+                continue
+            new_cand_set = expand_node(tree_index, cand_id, cand_set)
+            new_used_cands = used_cands | {cand_id}
+            new_matchings = frozendict_append(matchings, subword_idx, cand_id - 1)
+            if is_wildcard_match and extend_wildcards:
+                extra_matched, extra_cand_set, new_used_cands = expand_wildcard_dep(
                     all_lemma_feats,
                     tree_index,
-                    subwords,
-                    expand_node(tree_index, cand_id, cand_set),
-                    used_cands | {cand_id},
-                    used_subwords | {subword_idx},
-                    frozendict_append(matchings, subword_idx, cand_id)
-                ))
+                    matcher_lemma_feats,
+                    expand_node(tree_index, cand_id),
+                    new_used_cands,
+                )
+                new_cand_set = new_cand_set | extra_cand_set
+                for extra_match in extra_matched:
+                    new_matchings = frozendict_append(new_matchings, subword_idx, extra_match)
+            all_matches.update(select_dep_step(
+                all_lemma_feats,
+                tree_index,
+                subwords,
+                new_cand_set,
+                new_used_cands,
+                used_subwords | {subword_idx},
+                new_matchings
+            ))
     return all_matches
+
+
+def expand_wildcard_dep(all_lemma_feats, tree_index, wildcard_lemma_feats, cand_set, used_cands):
+    matched = []
+    while 1:
+        changed = False
+        for cand_id in cand_set - used_cands:
+            matches, is_wildcard_match = match_any(wildcard_lemma_feats, all_lemma_feats[cand_id - 1])
+            if not matches:
+                continue
+            assert is_wildcard_match
+            changed = True
+            cand_set = expand_node(tree_index, cand_id, cand_set)
+            used_cands = used_cands | {cand_id}
+            matched.append(cand_id - 1)
+        if not changed:
+            break
+    return matched, cand_set, used_cands

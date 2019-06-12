@@ -11,6 +11,13 @@ from lextract.keyed_db.tables import metadata, word as word_t
 import pytest
 
 
+fd = FrozenDict
+
+
+def fs(*it):
+    return frozenset(it)
+
+
 TEST_WORDS = [
     ("tulla", "humalaan"),
     ("humalaan",),
@@ -114,15 +121,19 @@ def assert_token_matches(matches, expected_matches):
         assert word["form"] == expected_match_form
 
 
-fd = FrozenDict
+def assert_dep_matches(matches, expected_matches):
+    assert len(matches) == len(expected_matches)
+    for matchings, word in matches:
+        assert word["form"] in expected_matches
+        assert {expected_matches[word["form"]]} == matchings
 
 
 @pytest.mark.parametrize(
     "toks,expected_matches",
     [
-        (["humaloissa"], [({fd({0: (0,)})}, "humalassa")]),
-        (["älä", "tule", "humalaan"], [({fd({0: (1,), 1: (2,)})}, "tulla humalaan"), ({fd({0: (2,)})}, "humalaan")]),
-        (["tulevasta"], [({fd({0: (0,)})}, "tuleva")]),
+        (["humaloissa"], [({fd({0: fs(0)})}, "humalassa")]),
+        (["älä", "tule", "humalaan"], [({fd({0: fs(1), 1: fs(2)})}, "tulla humalaan"), ({fd({0: fs(2)})}, "humalaan")]),
+        (["tulevasta"], [({fd({0: fs(0)})}, "tuleva")]),
     ],
 )
 def test_token_matches(phrase_testdb, toks, expected_matches):
@@ -140,22 +151,37 @@ CONLLS = """
 2	pidän	pitää	VERB	_	Mood=Ind|Number=Sing|Person=1|Tense=Pres|VerbForm=Fin|Voice=Act	0	root	_	_
 3	voileipäkakusta	voi#leipä#kakku	NOUN	_	Case=Ela|Number=Sing	2	nmod	_	_
 4	.	.	PUNCT	_	_	2	punct	_	_
+
+1	Minä	minä	PRON	_	Case=Nom|Number=Sing|Person=1|PronType=Prs	2	nsubj	_	_
+2	pidän	pitää	VERB	_	Mood=Ind|Number=Sing|Person=1|Tense=Pres|VerbForm=Fin|Voice=Act	0	root	_	_
+3	herkullisesta	herkullinen	ADJ	_	Case=Ela|Degree=Pos|Number=Sing	4	amod	_	_
+4	voileipäkakusta	voi#leipä#kakku	NOUN	_	Case=Ela|Number=Sing	2	nmod	_	_
+5	.	.	PUNCT	_	_	2	punct	_	_
+
+1	Minä	minä	PRON	_	Case=Nom|Number=Sing|Person=1|PronType=Prs	2	nsubj	_	_
+2	pidän	pitää	VERB	_	Mood=Ind|Number=Sing|Person=1|Tense=Pres|VerbForm=Fin|Voice=Act	0	root	_	_
+3	suomen	suomi	NOUN	_	Case=Gen|Number=Sing	4	nmod:poss	_	_
+4	voileipäkakusta	voi#leipä#kakku	NOUN	_	Case=Ela|Number=Sing	2	nmod	_	_
+5	.	.	PUNCT	_	_	2	punct	_	_
+
+1	Mistä	mikä	PRON	_	Case=Ela|Number=Sing|PronType=Int	4	nmod	_	_
+2	heidän	hän	PRON	_	Case=Gen|Number=Plur|Person=3|PronType=Prs	3	nmod:poss	_	_
+3	vihansa	viha	NOUN	_	Case=Gen|Number=Sing|Person[psor]=3	4	dobj	_	_
+4	kumpuaa	kummuta	VERB	_	Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin|Voice=Act	0	root	_	_
+5	?	?	PUNCT	_	_	4	punct	_	_
 """.strip().split("\n\n")
 
 
 @pytest.mark.parametrize(
     "conll,expected_matches",
     [
-        (CONLLS[0], {"humalaan": fd({0: (3,)}), "tulla humalaan": fd({0: (2,), 1: (3,)})}),
+        (CONLLS[0], {"humalaan": fd({0: fs(2)}), "tulla humalaan": fd({0: fs(1), 1: fs(2)})}),
     ],
 )
 def test_dep_matches(phrase_testdb, conll, expected_matches):
     sent = conllu.parse(conll)[0]
     matches = list(extract_deps(phrase_testdb, sent))
-    assert len(matches) == len(expected_matches)
-    for matchings, word in matches:
-        assert word["form"] in expected_matches
-        assert {expected_matches[word["form"]]} == matchings
+    assert_dep_matches(matches, expected_matches)
 
 
 @pytest.mark.parametrize(
@@ -163,29 +189,64 @@ def test_dep_matches(phrase_testdb, conll, expected_matches):
     [
         (
             ["Minä", "pidän", "voileipäkakusta"],
-            [({fd({0: (1,), 1: (2,)})}, 'pitää ___-sta')]
+            [({fd({0: fs(1), 1: fs(2)})}, 'pitää ___-sta')]
         ),
         (
             ["Minä", "pidän", "herkullisesta", "voileipäkakusta"],
-            [({fd({0: (1,), 1: (2, 3)}), fd({0: (1,), 1: (2,)})}, 'pitää ___-sta')]
+            [({fd({0: fs(1), 1: fs(2, 3)}), fd({0: fs(1), 1: fs(2)})}, 'pitää ___-sta')]
         ),
         (
             ["Minä", "voin", "pitää", "laukustasi", "kiinni", "."],
             [
-                ({fd({0: (2,), 1: (3,), 2: (4,)})}, 'pitää ___-sta kiinni'),
-                ({fd({0: (2,), 1: (3,)})}, 'pitää ___-sta')
+                ({fd({0: fs(2), 1: fs(3), 2: fs(4)})}, 'pitää ___-sta kiinni'),
+                ({fd({0: fs(2), 1: fs(3)})}, 'pitää ___-sta')
             ]
         ),
         (
             ["Minä", "pidän", "ihmisiä", "vihamielisinä"],
-            [({fd({0: (1,), 1: (2,), 2: (3,)})}, 'pitää ___-ta ___-na')]
+            [({fd({0: fs(1), 1: fs(2), 2: fs(3)})}, 'pitää ___-ta ___-na')]
         ),
         (
             ["Minä", "pidän", "siistiä", "ihmisiä", "vihamielisinä"],
-            [({fd({0: (1,), 1: (2, 3), 2: (4,)})}, 'pitää ___-ta ___-na')]
+            [({fd({0: fs(1), 1: fs(2, 3), 2: fs(4)})}, 'pitää ___-ta ___-na')]
         ),
     ],
 )
 def test_token_frame_matches(frame_testdb, toks, expected_matches):
     matches = list(extract_toks(frame_testdb, toks))
     assert_token_matches(matches, expected_matches)
+
+
+@pytest.mark.parametrize(
+    "conll,expected_matches",
+    [
+        (
+            CONLLS[1],
+            {
+                'pitää ___-sta': fd({0: fs(1), 1: fs(2)})
+            }
+        ),
+        (
+            CONLLS[2],
+            {
+                'pitää ___-sta': fd({0: fs(1), 1: fs(2, 3)})
+            }
+        ),
+        (
+            CONLLS[3],
+            {
+                'pitää ___-sta': fd({0: fs(1), 1: fs(3)})
+            }
+        ),
+        (
+            CONLLS[4],
+            {
+                'kummuta ___-sta': fd({0: fs(3), 1: fs(0)})
+            }
+        ),
+    ],
+)
+def test_dep_frame_matches(frame_testdb, conll, expected_matches):
+    sent = conllu.parse(conll)[0]
+    matches = list(extract_deps(frame_testdb, sent))
+    assert_dep_matches(matches, expected_matches)

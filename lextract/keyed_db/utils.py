@@ -7,5 +7,5 @@ def fi_lemmatise(x):
 
 def frozendict_append(fd, k, v):
     return fd.updated({
-        k: fd.get(k, ()) + (v,)
+        k: fd.get(k, frozenset()) | frozenset((v,))
     })
