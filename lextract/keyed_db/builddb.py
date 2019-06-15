@@ -135,10 +135,13 @@ def wiktionary_frames(session, lemmatise=fi_lemmatise):
                 if payload in CASES:
                     mapped_case = WIKTIONARY_TO_OMORFI_CASE_MAP.get(payload)
                     if mapped_case is not None:
-                        subwords.append((payload, {WILDCARD: {(("case", mapped_case.upper()),)}}))
                         mapped_normseg = CASE_NORMSEG_MAP.get(payload)
                         if mapped_normseg is not None:
-                            form_bits.append("___" + mapped_normseg)
+                            case_surf = "___" + mapped_normseg
+                            form_bits.append(case_surf)
+                        else:
+                            case_surf = payload
+                        subwords.append((case_surf, {WILDCARD: {(("case", mapped_case.upper()),)}}))
                 else:
                     # TODO: deal with ASSOC_POS and `direct object`
                     pass
