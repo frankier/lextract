@@ -20,7 +20,9 @@ from .queries import wiktionary_gram_query
 from wikiparse.gram_words import CASES
 from finntk.data.omorfi_normseg import CASE_NAME_MAP
 from finntk.data.wiktionary_normseg import CASE_NORMSEG_MAP
+from finntk.data.wordnet import ALL_ABBRVS, PRON_CASE
 from finntk.wordnet import has_abbrv
+from finntk.wordnet.abbrv import get_abbrv_auto
 
 logger = logging.getLogger(__name__)
 click_log.basic_config(logger)
@@ -33,10 +35,29 @@ def null_lemmatise(x):
     return {x: [{}]}
 
 
-def index_word(word, lemmatise=null_lemmatise):
+def get_key_idx(subwords):
     key_idx = 0
+    min_freq = 1
+    for idx, (_subword, lemma_feats) in enumerate(subwords):
+        skip = False
+        total_freq = 0
+        for subword_lemma in lemma_feats.keys():
+            if subword_lemma == WILDCARD:
+                skip = True
+                break
+            total_freq += word_frequency(subword_lemma, "fi")
+        if skip:
+            continue
+        if total_freq < min_freq:
+            min_freq = total_freq
+            key_idx = idx
+    return key_idx
+
+
+def index_word(word, lemmatise=null_lemmatise):
     subwords = []
     if len(word) == 1:
+        key_idx = 0
         word_type = "inflection"
         lemma_feats = lemmatise(word[0])
         #if word[0] in lemma_feats.keys():
@@ -52,15 +73,10 @@ def index_word(word, lemmatise=null_lemmatise):
     else:
         word_type = "multiword"
         min_freq = 1
-        for idx, subword in enumerate(word):
-            total_freq = 0
+        for subword in word:
             lemma_feats = lemmatise(subword)
-            for subword_lemma in lemma_feats.keys():
-                total_freq += word_frequency(subword_lemma, "fi")
-            if total_freq < min_freq:
-                min_freq = total_freq
-                key_idx = idx
             subwords.append((subword, lemma_feats))
+        key_idx = get_key_idx(subwords)
     return word_type, key_idx, subwords
 
 
@@ -93,6 +109,8 @@ def wordnet_wordlist():
     from lextract.wordnet.fin import Wordnet as FinWordnet
     all_lemmas = []
     for lemma in FinWordnet.lemma_names().keys():
+        if has_abbrv(lemma):
+            continue
         all_lemmas.append(FIN_SPACE.split(lemma))
     all_lemmas.sort()
     return all_lemmas
@@ -102,11 +120,30 @@ def wiktionary_wordlist(session):
     headwords = session.execute(select([headword_t.c.name]).select_from(headword_t).order_by(headword_t.c.name))
     all_lemmas = []
     for (word,) in headwords:
-        if has_abbrv(word):
-            continue
         all_lemmas.append(word.split(" "))
     all_lemmas.sort()
     return all_lemmas
+
+
+def mk_frame(wordlist_name, subwords, headword_idx, **extra):
+    return (
+        " ".join((surf for surf, anal in subwords)),
+        (wordlist_name,),
+        "frame",
+        headword_idx,
+        subwords, {
+            "type": wordlist_name,
+            **extra
+        }
+    )
+
+
+def case_surf(full_case_name):
+    if full_case_name in CASE_NORMSEG_MAP:
+        mapped_normseg = CASE_NORMSEG_MAP[full_case_name] or ""
+        return "___" + mapped_normseg
+    else:
+        return full_case_name
 
 
 def wiktionary_frames(session, lemmatise=fi_lemmatise):
@@ -122,7 +159,6 @@ def wiktionary_frames(session, lemmatise=fi_lemmatise):
             # XXX: Possibly grammatical notes for other POSs could be taken
             # into account later. How many words actually have them?
             continue
-        form_bits = []
         subwords = []
         headword_idx = None
         for cmd, payload in proc_assoc(extra["raw_defn"]):
@@ -130,18 +166,11 @@ def wiktionary_frames(session, lemmatise=fi_lemmatise):
                 assert headword_idx is None
                 headword_idx = len(subwords)
                 subwords.append(headword_subword())
-                form_bits.append(word)
             elif cmd in ("subj", "obj"):
                 if payload in CASES:
                     mapped_case = WIKTIONARY_TO_OMORFI_CASE_MAP.get(payload)
                     if mapped_case is not None:
-                        mapped_normseg = CASE_NORMSEG_MAP.get(payload)
-                        if mapped_normseg is not None:
-                            case_surf = "___" + mapped_normseg
-                            form_bits.append(case_surf)
-                        else:
-                            case_surf = payload
-                        subwords.append((case_surf, {WILDCARD: {(("case", mapped_case.upper()),)}}))
+                        subwords.append((case_surf(payload), {WILDCARD: {(("case", mapped_case.upper()),)}}))
                 else:
                     # TODO: deal with ASSOC_POS and `direct object`
                     pass
@@ -151,25 +180,34 @@ def wiktionary_frames(session, lemmatise=fi_lemmatise):
                 pass
             elif cmd == "assoc":
                 subwords.append((payload, lemmatise(payload)))
-                form_bits.append(payload)
         if headword_idx is None:
             headword_idx = 0
             subwords.insert(0, headword_subword())
-            form_bits.insert(0, word)
         if len(subwords) < 2:
             continue
         # XXX: Headword may not always be the best choice of key
         # -- but at least it always has a lemma!
-        yield (
-            " ".join(form_bits),
-            ("wiktionary_frames",),
-            "frame",
-            headword_idx,
-            subwords, {
-                "type": "wiktionary_frame",
-                "sense_id": sense_id,
-            }
-        )
+        yield mk_frame("wiktionary_frame", subwords, headword_idx, sense_id=sense_id)
+
+
+def wordnet_frames(session, lemmatise=fi_lemmatise):
+    from lextract.wordnet.fin import Wordnet as FinWordnet
+    abbrv_auto = get_abbrv_auto()
+    all_lemmas = []
+    for lemma in FinWordnet.lemma_names().keys():
+        if not has_abbrv(lemma):
+            continue
+        lemma_bits = [bit for bit in lemma.split("_") if bit]
+        subwords = []
+        for lemma_bit in lemma_bits:
+            if lemma_bit in ALL_ABBRVS:
+                mapped_case = PRON_CASE[ALL_ABBRVS[lemma_bit]]
+                full_case_name = CASE_NAME_MAP[mapped_case]
+                subwords.append((case_surf(full_case_name), {WILDCARD: {(("case", mapped_case.upper()),)}}))
+            else:
+                subwords.append((lemma_bit, lemmatise(lemma_bit)))
+        key_idx = get_key_idx(subwords)
+        yield mk_frame("wordnet_frame", subwords, key_idx, wordnet_lemma=lemma)
 
 
 def combine_wordlists(*wordlist_source_pairs):
@@ -186,7 +224,16 @@ def wordlists(session, wl):
     return combine_wordlists(*wordlist_its)
 
 
-WORDLIST_NAMES = ["wordnet", "wiktionary", "wiktionary_frames"]
+def indexed_wordlists(session, wl):
+    indexed = index_wordlist(wordlists(session, wl))
+    if "wiktionary_frame" in wl:
+        indexed = chain(indexed, wiktionary_frames(session))
+    if "wordnet_frame" in wl:
+        indexed = chain(indexed, wordnet_frames(session))
+    return indexed
+
+
+WORDLIST_NAMES = ["wordnet", "wiktionary", "wiktionary_frame", "wordnet_frame"]
 
 
 @click.command()
@@ -198,9 +245,7 @@ def add_keyed_words(wl):
     """
     session = get_session()
     metadata.create_all(session().get_bind().engine)
-    indexed = index_wordlist(wordlists(session, wl))
-    if "wiktionary_frames" in wl:
-        indexed = wiktionary_frames(session)
+    indexed = indexed_wordlists(session, wl)
     if logger.isEnabledFor(logging.INFO):
         ctx = contextlib.nullcontext(indexed)
     else:
