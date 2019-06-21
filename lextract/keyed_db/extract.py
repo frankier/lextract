@@ -2,7 +2,7 @@ from typing import List
 from boltons.dictutils import FrozenDict
 
 from .consts import WILDCARD
-from .utils import fi_lemmatise, frozendict_append
+from .utils import fi_lemmatise, frozendict_append, frozendict_order_insert
 from lextract.keyed_db.tables import key_lemma as key_lemma_t, word as word_t, subword as subword_t
 from .queries import key_lemmas_query, word_subwords_query
 
@@ -233,7 +233,7 @@ def select_dep_step(all_lemma_feats, tree_index, subwords, cand_set, used_cands,
                 continue
             new_cand_set = expand_node(tree_index, cand_id, cand_set)
             new_used_cands = used_cands | {cand_id}
-            new_matchings = frozendict_append(matchings, subword_idx, cand_id - 1)
+            new_matchings = frozendict_order_insert(matchings, subword_idx, cand_id - 1)
             if is_wildcard_match and extend_wildcards:
                 extra_matched, extra_cand_set, new_used_cands = expand_wildcard_dep(
                     all_lemma_feats,
@@ -244,7 +244,7 @@ def select_dep_step(all_lemma_feats, tree_index, subwords, cand_set, used_cands,
                 )
                 new_cand_set = new_cand_set | extra_cand_set
                 for extra_match in extra_matched:
-                    new_matchings = frozendict_append(new_matchings, subword_idx, extra_match)
+                    new_matchings = frozendict_order_insert(new_matchings, subword_idx, extra_match)
             all_matches.update(select_dep_step(
                 all_lemma_feats,
                 tree_index,
