@@ -60,15 +60,11 @@ def index_word(word, lemmatise=null_lemmatise):
         key_idx = 0
         word_type = "inflection"
         lemma_feats = lemmatise(word[0])
-        #if word[0] in lemma_feats.keys():
-            # XXX: We don't want to add lemmas because they will get looked up
+        lemmas = list(lemma_feats.keys())
+        if lemmas == [word[0]]:
+            # We don't want to add lemmas because they will get looked up
             # anyway during decompounding
-            # -but-
-            # It could be that this is actually a word form that happens
-            # to be the same as some lemma. Happens a lot with infinitives
-            # versus derived words. Haven't figured out whether this is a
-            # problem in practice. POS information could help.
-            #return
+            return
         subwords.append((word[0], lemma_feats))
     else:
         word_type = "multiword"
