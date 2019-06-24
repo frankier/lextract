@@ -3,23 +3,38 @@ from nltk.corpus import wordnet
 from nltk.corpus.reader.wordnet import Lemma
 from finntk.wordnet.reader import fiwn_encnt
 from .base import ExtractableWordnet
-from .utils import wn_lemma_map
+from .utils import wn_lemma_map, synset_key_lemmas
 
 
-def wn_lemma_keys(wn: str, lemma_name: str) -> List[Lemma]:
+def lemmas(lemma_name: str, wn: str, pos: str=None) -> List[Lemma]:
     if wn == "qf2":
-        return fiwn_encnt.lemmas(lemma_name)
+        return fiwn_encnt.lemmas(lemma_name, pos=pos)
     else:
-        return wordnet.lemmas(lemma_name, lang=wn)
+        return wordnet.lemmas(lemma_name, pos=pos, lang=wn)
 
 
 def objify_lemmas(wn_to_lemma: Dict[str, List[str]]) -> Dict[str, List[Lemma]]:
     return {
         wn: [
-            lemma_obj for lemma in lemma_list for lemma_obj in wn_lemma_keys(wn, lemma)
+            lemma_obj for lemma in lemma_list for lemma_obj in lemmas(lemma, wn)
         ]
         for wn, lemma_list in wn_to_lemma.items()
     }
 
 
-__all__ = ["ExtractableWordnet", "wn_lemma_keys", "wn_lemma_map", "objify_lemmas"]
+def get_lemma_names(ssof, wns):
+    from finntk.wordnet.utils import en2fi_post
+    wns = list(wns)
+    lemmas = []
+    if "qf2" in wns:
+        fi_ssof = en2fi_post(ssof)
+        ss = fiwn_encnt.of2ss(fi_ssof)
+        lemmas.extend(ss.lemmas())
+        wns.remove("qf2")
+    for wnref in wns:
+        ss = wordnet.of2ss(ssof)
+        lemmas.extend(ss.lemmas(lang=wnref))
+    return {l.name() for l in lemmas}
+
+
+__all__ = ["ExtractableWordnet", "lemmas", "wn_lemma_map", "objify_lemmas"]

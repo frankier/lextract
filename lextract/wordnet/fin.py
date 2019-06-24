@@ -35,3 +35,13 @@ class Wordnet(ExtractableWordnet):
             return fiwn_encnt.synset(synset_str)
         else:
             return wordnet.synset(synset_str)
+
+
+def get_lemma_objs(lemma_name, wns, pos=None):
+    from lextract.wordnet import lemmas
+    from lextract.wordnet.utils import synset_key_lemmas
+    wn_lemmas = {}
+    for wn in wns:
+        for lemma in lemmas(lemma_name, wn, pos=pos):
+            wn_lemmas.setdefault(wn, []).append(lemma)
+    return synset_key_lemmas(wn_lemmas, Wordnet)
