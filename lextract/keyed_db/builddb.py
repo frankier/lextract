@@ -3,6 +3,7 @@ import logging
 import click_log
 import click
 import heapq
+from itertools import groupby
 from more_itertools import groupby_transform
 from sqlalchemy import select
 from itertools import chain
@@ -207,7 +208,13 @@ def wordnet_frames(session, lemmatise=fi_lemmatise):
 
 
 def combine_wordlists(*wordlist_source_pairs):
-    merged = heapq.merge(((word, source) for word_list, source in wordlist_source_pairs for word in word_list))
+    to_merge = []
+    for word_list, source in wordlist_source_pairs:
+        word_sources = []
+        for word in word_list:
+            word_sources.append((word, source))
+        to_merge.append(word_sources)
+    merged = list(heapq.merge(*to_merge))
     return groupby_transform(merged, itemgetter(0), itemgetter(1))
 
 
@@ -217,15 +224,34 @@ def wordlists(session, wl):
         wordlist_its.append((wordnet_wordlist(), "wordnet"))
     if "wiktionary" in wl:
         wordlist_its.append((wiktionary_wordlist(session), "wiktionary"))
+
     return combine_wordlists(*wordlist_its)
+
+
+def framelists(session, wl):
+    frames_in = []
+    key_f = itemgetter(0)
+    if "wiktionary_frame" in wl:
+        frames_in.append(sorted(wiktionary_frames(session), key=key_f))
+    if "wordnet_frame" in wl:
+        frames_in.append(sorted(wordnet_frames(session), key=key_f))
+    merged = heapq.merge(*frames_in, key=key_f)
+    for key, group in groupby(merged, key=key_f):
+        group_list = list(group)
+        result = list(group_list[0])
+        result[1] = list(result[1])
+        result[5] = {
+            "defns": [result[5]]
+        }
+        for other in group_list[1:]:
+            result[1].extend(other[1])
+            result[5]["defns"].append(other[5])
+        yield result
 
 
 def indexed_wordlists(session, wl):
     indexed = index_wordlist(wordlists(session, wl))
-    if "wiktionary_frame" in wl:
-        indexed = chain(indexed, wiktionary_frames(session))
-    if "wordnet_frame" in wl:
-        indexed = chain(indexed, wordnet_frames(session))
+    indexed = chain(indexed, framelists(session, wl))
     return indexed
 
 
