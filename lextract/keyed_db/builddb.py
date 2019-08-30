@@ -23,7 +23,6 @@ from finntk.data.omorfi_normseg import CASE_NAME_MAP
 from finntk.data.wiktionary_normseg import CASE_NORMSEG_MAP
 from finntk.data.wordnet import ALL_ABBRVS, PRON_CASE
 from finntk.wordnet import has_abbrv
-from finntk.wordnet.abbrv import get_abbrv_auto
 
 logger = logging.getLogger(__name__)
 click_log.basic_config(logger)
@@ -69,7 +68,6 @@ def index_word(word, lemmatise=null_lemmatise):
         subwords.append((word[0], lemma_feats))
     else:
         word_type = "multiword"
-        min_freq = 1
         for subword in word:
             lemma_feats = lemmatise(subword)
             subwords.append((subword, lemma_feats))
@@ -189,8 +187,6 @@ def wiktionary_frames(session, lemmatise=fi_lemmatise):
 
 def wordnet_frames(session, lemmatise=fi_lemmatise):
     from lextract.wordnet.fin import Wordnet as FinWordnet
-    abbrv_auto = get_abbrv_auto()
-    all_lemmas = []
     for lemma in FinWordnet.lemma_names().keys():
         if not has_abbrv(lemma):
             continue
