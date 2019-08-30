@@ -148,7 +148,7 @@ def wiktionary_frames(session, lemmatise=fi_lemmatise):
         # return (word, lemmatise(word))
         return (word, {word: {()}})
 
-    grams = session.execute(wiktionary_gram_query())
+    grams = session.execute(wiktionary_gram_query)
     for word, sense_id, pos, extra in grams:
         if pos != "Verb":
             # XXX: Possibly grammatical notes for other POSs could be taken

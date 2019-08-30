@@ -8,7 +8,7 @@ key_lemma = Table(
     "key_lemma",
     metadata,
     Column("id", Integer, primary_key=True),
-    Column("key_lemma", String),
+    Column("key_lemma", String, index=True),
     Column("word_id", ForeignKey("word.id")),
 )
 
@@ -33,8 +33,8 @@ subword = Table(
     "subword",
     metadata,
     Column("id", Integer, primary_key=True),
-    Column("word_id", ForeignKey("word.id")),
-    Column("subword_idx", Integer),
+    Column("word_id", ForeignKey("word.id"), index=True),
+    Column("subword_idx", Integer, index=True),
     Column("form", String),
     Column("lemma_feats", JSON),
 )

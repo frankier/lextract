@@ -1,4 +1,4 @@
-from typing import List
+from typing import Dict, List
 from boltons.dictutils import FrozenDict
 
 from .consts import WILDCARD
@@ -7,16 +7,26 @@ from lextract.keyed_db.tables import key_lemma as key_lemma_t, word as word_t, s
 from .queries import key_lemmas_query, word_subwords_query
 
 
-def get_matchers(session, all_lemmas):
-    query = key_lemmas_query(all_lemmas)
-    lemma_key_rows = session.execute(query)
+_query_cache = {}
+
+
+def get_connection(session):
+    # TODO: Increase cache size for sqlite to 32768 at this point?
+    return session.connection(execution_options={"compiled_cache": _query_cache})
+
+
+def get_matchers(conn, all_lemmas):
+    query = key_lemmas_query
+    lemma_key_rows = conn.execute(query, key_lemmas=list(all_lemmas))
     key_lemmas = {}
-    word_ids = set()
+    word_ids = []
     for row in lemma_key_rows:
-        word_ids.add(row[word_t.c.id])
-        key_lemmas.setdefault(row[key_lemma_t.c.key_lemma], []).append(row[word_t.c.id])
+        word_id = row[word_t.c.id]
+        if word_id not in word_ids:
+            word_ids.append(word_id)
+        key_lemmas.setdefault(row[key_lemma_t.c.key_lemma], []).append(word_id)
     words = {}
-    word_subword_rows = session.execute(word_subwords_query(word_ids))
+    word_subword_rows = conn.execute(word_subwords_query, word_ids=word_ids)
     for row in word_subword_rows:
         if row[word_t.c.id] not in words:
             words[row[word_t.c.id]] = {
@@ -60,8 +70,8 @@ def index_sentence(surfs):
     return lemma_map, all_lemma_feats
 
 
-def iter_match_cands(session, lemma_map, all_lemma_feats):
-    key_lemmas, words = get_matchers(session, lemma_map.keys())
+def iter_match_cands(conn, lemma_map, all_lemma_feats):
+    key_lemmas, words = get_matchers(conn, lemma_map.keys())
     # Matched lemma
     for key_lemma, word_ids in key_lemmas.items():
         # Potential matched word
@@ -105,10 +115,14 @@ def match_any(matcher_lemma_feats, cand_lemma_feats):
     return False, None
 
 
-def extract_toks(session, surfs: List[str], extend_wildcards=True):
+def extract_toks(conn, surfs: List[str], extend_wildcards=True):
     lemma_map, all_lemma_feats = index_sentence(surfs)
-    key_lemmas, words = get_matchers(session, lemma_map)
-    for lemma_idx, key_lemma, word in iter_match_cands(session, lemma_map, all_lemma_feats):
+    return extract_toks_indexed(conn, lemma_map, all_lemma_feats, extend_wildcards=extend_wildcards)
+
+
+def extract_toks_indexed(conn, lemma_map: Dict[str, int], all_lemma_feats: List[Dict[str, str]], extend_wildcards=True):
+    key_lemmas, words = get_matchers(conn, lemma_map)
+    for lemma_idx, key_lemma, word in iter_match_cands(conn, lemma_map, all_lemma_feats):
         # Check lemma and feats for other lemmas
         subwords = list(enumerate(word["subwords"]))
         left_matches = select_tok_step(
@@ -196,7 +210,7 @@ def expand_node(tree_index, lemma_idx, cand_set=frozenset()):
     )
 
 
-def extract_deps(session, sent):
+def extract_deps(conn, sent):
     for idx, tok in enumerate(sent):
         assert tok["id"] == idx + 1
     tree = sent.to_tree()
@@ -204,7 +218,7 @@ def extract_deps(session, sent):
     lemma_map, all_lemma_feats = index_sentence((token["form"] for token in sent))
     tree_index = {}
     make_tree_index(tree, tree_index)
-    for lemma_idx, key_lemma, word in iter_match_cands(session, lemma_map, all_lemma_feats):
+    for lemma_idx, key_lemma, word in iter_match_cands(conn, lemma_map, all_lemma_feats):
         lemma_id = lemma_idx + 1
         matches = select_dep_step(
             all_lemma_feats,
