@@ -1,5 +1,6 @@
 from typing import Dict, List
 from boltons.dictutils import FrozenDict
+from more_itertools import chunked
 
 from .consts import WILDCARD
 from .utils import fi_lemmatise, frozendict_append, frozendict_order_insert
@@ -7,6 +8,7 @@ from lextract.keyed_db.tables import key_lemma as key_lemma_t, word as word_t, s
 from .queries import key_lemmas_query, word_subwords_query
 
 
+LEMMAS_CHUNK_SIZE = 256
 _query_cache = {}
 
 
@@ -71,20 +73,21 @@ def index_sentence(surfs):
 
 
 def iter_match_cands(conn, lemma_map, all_lemma_feats):
-    key_lemmas, words = get_matchers(conn, lemma_map.keys())
-    # Matched lemma
-    for key_lemma, word_ids in key_lemmas.items():
-        # Potential matched word
-        for word_id in word_ids:
-            word = words[word_id]
-            # Anchor point for match
-            for lemma_idx in lemma_map[key_lemma]:
-                # Check feats on key lemma
-                matcher_feats = key_matcher_feats(word, key_lemma)
-                cand_feats = all_lemma_feats[lemma_idx][key_lemma]
-                if not any_subset(matcher_feats, cand_feats):
-                    continue
-                yield lemma_idx, key_lemma, word
+    for lemma_chunk in chunked(lemma_map.keys(), LEMMAS_CHUNK_SIZE):
+        key_lemmas, words = get_matchers(conn, lemma_chunk)
+        # Matched lemma
+        for key_lemma, word_ids in key_lemmas.items():
+            # Potential matched word
+            for word_id in word_ids:
+                word = words[word_id]
+                # Anchor point for match
+                for lemma_idx in lemma_map[key_lemma]:
+                    # Check feats on key lemma
+                    matcher_feats = key_matcher_feats(word, key_lemma)
+                    cand_feats = all_lemma_feats[lemma_idx][key_lemma]
+                    if not any_subset(matcher_feats, cand_feats):
+                        continue
+                    yield lemma_idx, key_lemma, word
 
 
 def key_matcher_feats(word, key_lemma):
