@@ -125,26 +125,21 @@ def extract_toks_indexed(conn, lemma_map: Dict[str, int], all_lemma_feats: List[
     for lemma_idx, key_lemma, word in iter_match_cands(conn, lemma_map, all_lemma_feats):
         # Check lemma and feats for other lemmas
         subwords = list(enumerate(word["subwords"]))
-        left_matches = select_tok_step(
-            lambda n: n - 1,
-            extend_wildcards,
-            all_lemma_feats,
-            subwords,
-            lemma_idx - 1,
-            word["key_idx"] - 1,
-            FrozenDict(),
-        )
+
+        def step(dir):
+            return select_tok_step(
+                lambda n: n + dir,
+                extend_wildcards,
+                all_lemma_feats,
+                subwords,
+                lemma_idx + dir,
+                word["key_idx"] + dir,
+                FrozenDict(),
+            )
+        left_matches = step(-1)
         if not left_matches:
             continue
-        right_matches = select_tok_step(
-            lambda n: n + 1,
-            extend_wildcards,
-            all_lemma_feats,
-            subwords,
-            lemma_idx + 1,
-            word["key_idx"] + 1,
-            FrozenDict(),
-        )
+        right_matches = step(1)
         if not right_matches:
             continue
         key_matching = FrozenDict(((word["key_idx"], frozenset((lemma_idx,))),))
