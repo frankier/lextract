@@ -12,7 +12,7 @@ from wordfreq import word_frequency
 from lextract.keyed_db.tables import metadata, key_lemma as key_lemma_t, word as word_t, subword as subword_t
 from wikiparse.tables import headword as headword_t
 from wikiparse.utils.db import get_session, insert, insert_get_id
-from wikiparse.parse_assoc import proc_assoc
+from wikiparse import proc_assoc
 from lextract.aho_corasick.fin import FIN_SPACE
 from operator import itemgetter
 from .consts import WILDCARD
