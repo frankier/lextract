@@ -10,12 +10,9 @@ from finntk import get_omorfi, get_token_positions
 from finntk.finnpos import sent_finnpos
 from lextract.aho_corasick.models import TokenizedTagging
 from lextract.aho_corasick.automata_utils import conf_net_search
+from lextract.utils.space import FIN_SPACE
 from lextract.wordnet.fin import Wordnet as WordnetFin
-import re
 from typing import Dict, List, Set
-
-
-FIN_SPACE = re.compile(r" |_")
 
 
 def _fin_token_conf_net(l):
