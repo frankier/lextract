@@ -11,17 +11,20 @@ click = ">=6.7"
 plumbum = "^1.6.6"
 pyahocorasick = { git = "https://github.com/frankier/pyahocorasick.git", branch = "stiff-2018-09-20-3" }
 opencc = "^0.2"
-finntk = ">=0.0.61"
+finntk = ">=0.0.72"
 conllu = "^1.1"
-hfst = {version = "3.15.0.0b0",allows-prereleases = true}
-wikiparse = {git = "https://github.com/frankier/wikiparse.git", rev = "d51cc7a078ae8cb9e07a6a8604b35f1f4f8f924b"}
 click_log = "^0.3.2"
+sqlalchemy_utils = "^0.36.5"
+
+[tool.poetry.dependencies.wikiparse]
+git = "https://github.com/frankier/wikiparse.git"
+rev = "db557ef51d459320dff4b439329cbf6071ca5787"
 
 [tool.poetry.dev-dependencies]
 flake8 = "^3.5.0"
 pre-commit = "^1.10.2"
 pytest = "^4.1.1"
-mypy = "0.650"
+mypy = "0.770"
 
 [build-system]
 requires = ["poetry>=0.12"]
