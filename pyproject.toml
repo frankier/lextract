@@ -15,10 +15,7 @@ finntk = ">=0.0.72"
 conllu = "^1.1"
 click_log = "^0.3.2"
 sqlalchemy_utils = "^0.36.5"
-
-[tool.poetry.dependencies.wikiparse]
-git = "https://github.com/frankier/wikiparse.git"
-rev = "db557ef51d459320dff4b439329cbf6071ca5787"
+wikiparse = { git = "https://github.com/frankier/wikiparse.git", rev = "db557ef51d459320dff4b439329cbf6071ca5787" }
 
 [tool.poetry.dev-dependencies]
 flake8 = "^3.5.0"
