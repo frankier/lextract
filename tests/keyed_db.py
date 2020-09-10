@@ -2,13 +2,13 @@ from boltons.dictutils import FrozenDict
 from wikiparse.utils.db import get_session
 from sqlalchemy import select, func
 import conllu
+import pytest
 
-from lextract.keyed_db.utils import fi_lemmatise
-from lextract.keyed_db.builddb import index_wordlist, insert_indexed
+from lextract.utils.lemmatise import fi_lemmatise
+from lextract.mweproc.core import index_wordlist
+from lextract.keyed_db.builddb import insert_indexed
 from lextract.keyed_db.extract import extract_deps, extract_toks
 from lextract.keyed_db.tables import metadata, word as word_t
-
-import pytest
 
 
 fd = FrozenDict
@@ -111,7 +111,7 @@ def test_insert_worked(phrase_testdb):
     word_count = phrase_testdb.execute(
         select([func.count(word_t.c.id)])
     ).scalar()
-    assert word_count == 5
+    assert word_count == 4
 
 
 def assert_token_matches(matches, expected_matches):
@@ -173,14 +173,17 @@ CONLLS = """
 
 
 @pytest.mark.parametrize(
+    "use_conllu_feats", [False, True]
+)
+@pytest.mark.parametrize(
     "conll,expected_matches",
     [
         (CONLLS[0], {"humalaan": fd({0: fs(2)}), "tulla humalaan": fd({0: fs(1), 1: fs(2)})}),
     ],
 )
-def test_dep_matches(phrase_testdb, conll, expected_matches):
+def test_dep_matches(phrase_testdb, use_conllu_feats, conll, expected_matches):
     sent = conllu.parse(conll)[0]
-    matches = list(extract_deps(phrase_testdb, sent))
+    matches = list(extract_deps(phrase_testdb, sent, use_conllu_feats=use_conllu_feats))
     assert_dep_matches(matches, expected_matches)
 
 
@@ -218,6 +221,9 @@ def test_token_frame_matches(frame_testdb, toks, expected_matches):
 
 
 @pytest.mark.parametrize(
+    "use_conllu_feats", [False, True]
+)
+@pytest.mark.parametrize(
     "conll,expected_matches",
     [
         (
@@ -246,9 +252,9 @@ def test_token_frame_matches(frame_testdb, toks, expected_matches):
         ),
     ],
 )
-def test_dep_frame_matches(frame_testdb, conll, expected_matches):
+def test_dep_frame_matches(frame_testdb, use_conllu_feats, conll, expected_matches):
     sent = conllu.parse(conll)[0]
-    matches = list(extract_deps(frame_testdb, sent))
+    matches = list(extract_deps(frame_testdb, sent, use_conllu_feats=use_conllu_feats))
     assert_dep_matches(matches, expected_matches)
 
 

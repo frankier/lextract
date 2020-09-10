@@ -1,25 +1,20 @@
-from typing import Dict, List
+from typing import Any, Dict, List
 from boltons.dictutils import FrozenDict
 from more_itertools import chunked
 
-from .consts import WILDCARD
-from .utils import fi_lemmatise, frozendict_append, frozendict_order_insert
+from ..mweproc.consts import WILDCARD
+from ..utils.lemmatise import fi_lemmatise
+from .utils import frozendict_append, frozendict_order_insert
 from lextract.keyed_db.tables import key_lemma as key_lemma_t, word as word_t, subword as subword_t
 from .queries import key_lemmas_query, word_subwords_query
 
 
 LEMMAS_CHUNK_SIZE = 256
-_query_cache = {}
-
-
-def get_connection(session):
-    # TODO: Increase cache size for sqlite to 32768 at this point?
-    return session.connection(execution_options={"compiled_cache": _query_cache})
 
 
 def get_matchers(conn, all_lemmas):
     query = key_lemmas_query
-    lemma_key_rows = conn.execute(query, key_lemmas=list(all_lemmas))
+    lemma_key_rows = conn.execute(query, params={"key_lemmas": list(all_lemmas)})
     key_lemmas = {}
     word_ids = []
     for row in lemma_key_rows:
@@ -28,7 +23,7 @@ def get_matchers(conn, all_lemmas):
             word_ids.append(word_id)
         key_lemmas.setdefault(row[key_lemma_t.c.key_lemma], []).append(word_id)
     words = {}
-    word_subword_rows = conn.execute(word_subwords_query, word_ids=word_ids)
+    word_subword_rows = conn.execute(word_subwords_query, params={"word_ids": word_ids})
     for row in word_subword_rows:
         if row[word_t.c.id] not in words:
             words[row[word_t.c.id]] = {
@@ -69,6 +64,22 @@ def index_sentence(surfs):
         for lemma in lemmas:
             lemma_map.setdefault(lemma, []).append(idx)
         all_lemma_feats.append(lemma_feats)
+    return lemma_map, all_lemma_feats
+
+
+def conllu_to_indexed(sent):
+    lemma_map = {}
+    all_lemma_feats = []
+    for idx, tok in enumerate(sent):
+        lemma_map.setdefault(tok["lemma"], []).append(idx)
+        if tok["feats"] is not None:
+            all_feats = [[
+                (feat.lower(), val.upper())
+                for feat, val in tok["feats"].items()
+            ]]
+        else:
+            all_feats = []
+        all_lemma_feats.append({tok["lemma"]: all_feats})
     return lemma_map, all_lemma_feats
 
 
@@ -208,12 +219,15 @@ def expand_node(tree_index, lemma_idx, cand_set=frozenset()):
     )
 
 
-def extract_deps(conn, sent):
+def extract_deps(conn, sent, use_conllu_feats=False):
     for idx, tok in enumerate(sent):
         assert tok["id"] == idx + 1
     tree = sent.to_tree()
-    # XXX: Might be good to (optionally?) use feats from conll as-well or instead
-    lemma_map, all_lemma_feats = index_sentence((token["form"] for token in sent))
+    if use_conllu_feats:
+        # XXX: Might be good add an option to combine both?
+        lemma_map, all_lemma_feats = conllu_to_indexed(sent)
+    else:
+        lemma_map, all_lemma_feats = index_sentence((token["form"] for token in sent))
     tree_index = {}
     make_tree_index(tree, tree_index)
     for lemma_idx, key_lemma, word in iter_match_cands(conn, lemma_map, all_lemma_feats):

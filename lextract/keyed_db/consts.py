@@ -1,1 +1,0 @@
-WILDCARD = "__WILDCARD__"

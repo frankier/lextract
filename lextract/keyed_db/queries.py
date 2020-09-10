@@ -1,7 +1,7 @@
 from sqlalchemy import select, bindparam
 
 from .tables import key_lemma, word, subword
-from wikiparse.tables import headword, word_sense
+from wikiparse.db.tables import headword, word_sense
 
 
 key_lemmas_query = select([
@@ -36,19 +36,4 @@ word_subwords_query = select([
     word.c.id.in_(bindparam("word_ids", expanding=True))
 ).order_by(
     subword.c.subword_idx,
-)
-
-
-wiktionary_gram_query = select([
-    headword.c.name,
-    word_sense.c.id,
-    word_sense.c.pos,
-    word_sense.c.extra,
-]).select_from(
-    headword.join(
-        word_sense,
-        word_sense.c.headword_id == headword.c.id
-    )
-).order_by(
-    headword.c.name,
 )

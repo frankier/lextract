@@ -1,14 +1,14 @@
-from typing import List, Dict
+from typing import List, Dict, Optional
 from nltk.corpus import wordnet
 from nltk.corpus.reader.wordnet import Lemma
-from finntk.wordnet.reader import fiwn_encnt
+from finntk.wordnet.reader import fiwn
 from .base import ExtractableWordnet
-from .utils import wn_lemma_map, synset_key_lemmas
+from .utils import wn_lemma_map
 
 
-def lemmas(lemma_name: str, wn: str, pos: str=None) -> List[Lemma]:
+def lemmas(lemma_name: str, wn: str, pos: Optional[str] = None) -> List[Lemma]:
     if wn == "qf2":
-        return fiwn_encnt.lemmas(lemma_name, pos=pos)
+        return fiwn.lemmas(lemma_name, pos=pos)
     else:
         return wordnet.lemmas(lemma_name, pos=pos, lang=wn)
 
@@ -28,7 +28,7 @@ def get_lemma_names(ssof, wns):
     lemmas = []
     if "qf2" in wns:
         fi_ssof = en2fi_post(ssof)
-        ss = fiwn_encnt.of2ss(fi_ssof)
+        ss = fiwn.of2ss(fi_ssof)
         lemmas.extend(ss.lemmas())
         wns.remove("qf2")
     for wnref in wns:

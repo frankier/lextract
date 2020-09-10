@@ -1,12 +1,16 @@
 from nltk.corpus import wordnet
+from nltk.corpus.reader.wordnet import Lemma, Synset
 from finntk.wordnet.reader import get_en_fi_maps, fiwn_encnt
 from finntk.wordnet.utils import ss2pre
 from .utils import merge_lemmas
 from .base import ExtractableWordnet
-from typing import Dict, List
+from typing import Dict, List, Tuple
 from lextract.data.fixes import fix_all
 
 fix_all()
+
+
+WNS = ("qf2", "fin", "qwf")
 
 
 def _map_qf2(synset_obj):
@@ -37,7 +41,7 @@ class Wordnet(ExtractableWordnet):
             return wordnet.synset(synset_str)
 
 
-def get_lemma_objs(lemma_name, wns, pos=None):
+def get_lemma_objs(lemma_name, wns=WNS, pos=None):
     from lextract.wordnet import lemmas
     from lextract.wordnet.utils import synset_key_lemmas
     wn_lemmas = {}
@@ -45,3 +49,14 @@ def get_lemma_objs(lemma_name, wns, pos=None):
         for lemma in lemmas(lemma_name, wn, pos=pos):
             wn_lemmas.setdefault(wn, []).append(lemma)
     return synset_key_lemmas(wn_lemmas, Wordnet)
+
+
+def preferred_synset(lemma_objs: List[Tuple[str, Lemma]], wn_order=WNS) -> Synset:
+    d = dict(lemma_objs)
+    lemma = None
+    for wn in wn_order:
+        if lemma is not None:
+            break
+        lemma = d.get(wn)
+    assert lemma is not None
+    return lemma.synset()
