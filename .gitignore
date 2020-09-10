@@ -7,3 +7,7 @@ __pycache__/
 /build/
 *.pyc
 /pip-wheel-metadata/
+/.idea/
+/.mypy_cache/
+/.snakemake/
+/.vscode/
