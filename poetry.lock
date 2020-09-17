@@ -53,6 +53,14 @@ tests_no_zope = ["coverage (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0
 
 [[package]]
 category = "main"
+description = "efficient arrays of booleans -- C extension"
+name = "bitarray"
+optional = false
+python-versions = "*"
+version = "1.5.3"
+
+[[package]]
+category = "main"
 description = "When they're not builtins, they're boltons."
 name = "boltons"
 optional = false
@@ -708,6 +716,7 @@ version = "1.1.9.dev1"
 reference = "ca029040175eaba65719e301045dd2c9a821281e"
 type = "git"
 url = "https://github.com/frankier/pyahocorasick.git"
+
 [[package]]
 category = "dev"
 description = "Python style guide checker"
@@ -1163,6 +1172,7 @@ pgsql = []
 reference = "db557ef51d459320dff4b439329cbf6071ca5787"
 type = "git"
 url = "https://github.com/frankier/wikiparse.git"
+
 [[package]]
 category = "main"
 description = "wordfreq is a Python library for looking up the frequencies of words in many"
@@ -1205,7 +1215,8 @@ testing = ["jaraco.itertools", "func-timeout"]
 auto = ["pyahocorasick"]
 
 [metadata]
-content-hash = "2bdc89e589370cdacbb46bfdb4f73eaf3e537251c774ff7338626934d0d10c46"
+content-hash = "3850c52dc93b8ad19926eba6ce40e8a36bbf7864023864f4e803dd6dd384d7c6"
+lock-version = "1.0"
 python-versions = "^3.7"
 
 [metadata.files]
@@ -1228,6 +1239,9 @@ atomicwrites = [
 attrs = [
     {file = "attrs-20.2.0-py2.py3-none-any.whl", hash = "sha256:fce7fc47dfc976152e82d53ff92fa0407700c21acd20886a13777a0d20e655dc"},
     {file = "attrs-20.2.0.tar.gz", hash = "sha256:26b54ddbbb9ee1d34d5d3668dd37d6cf74990ab23c828c2888dccdceee395594"},
+]
+bitarray = [
+    {file = "bitarray-1.5.3.tar.gz", hash = "sha256:567631fc922b1c2c528c376795f18dcc0604d18702e0b8b50e8e35f0474214a5"},
 ]
 boltons = [
     {file = "boltons-20.2.1-py2.py3-none-any.whl", hash = "sha256:3dd8a8e3c1886e7f7ba3422b50f55a66e1700161bf01b919d098e7d96dd2d9b6"},
