@@ -61,76 +61,83 @@ def gen_verb_default_feats(token: UdMweToken) -> Optional[Set[str]]:
     return generate_dict(omor)
 
 
-def gapped_mwe(
-    mwe: UdMwe,
+def gapped_mwe_tok(
+    token: UdMweToken,
     use_jnk: bool = False,
-    strong_head: bool = False,
-    strong_start: str = "<strong>",
-    strong_end: str = "</strong>"
+):
+    if token.payload is not None:
+        if token.feats:
+            # TODO: Generator for nominals
+            generated = gen_verb_default_feats(token)
+            if not generated:
+                # Log that we can't express all feats here
+                return "UNK"
+            else:
+                return "/".join(generated)
+        else:
+            return token.payload
+    elif token.feats.get("VerbForm") == "Inf":
+        if token.feats.get("InfForm") == "1":
+            if len(token.feats) > 2:
+                # Log that we can't express all feats
+                return "UNK"
+            else:
+                return "___-da"
+        elif token.feats.get("InfForm") == "3":
+            if "Case" in token.feats:
+                case = token.feats["Case"]
+                mapped_normseg = CASE_NORMSEG[case]
+                return "___-ma" + (mapped_normseg[1:] if mapped_normseg else "")
+            else:
+                return "UNK"
+        else:
+            # Log that we can't express all feats
+            return "UNK"
+    elif token.feats.get("VerbForm") == "Part":
+        token.feats.pop("VerbForm", None)
+        tense = token.feats.pop("Tense", "Pres")
+        voice = token.feats.pop("Voice", "Act")
+        if len(token.feats):
+            # Log that we can't express all feats
+            return "UNK"
+        elif tense == "Pres" and voice == "Act":
+            return "___-va"
+        elif tense == "Pres" and voice == "Pass":
+            return "___-tava"
+        elif tense == "Past" and voice == "Act":
+            return "___-nut"
+        elif tense == "Past" and voice == "Pass":
+            return "___-ttu"
+        else:
+            assert False
+    elif "Case" in token.feats:
+        case = token.feats["Case"]
+        if len(token.feats) > 1:
+            # Log that we can't express all feats
+            return "UNK"
+        else:
+            if use_jnk:
+                return jnk_case(case)
+            else:
+                return gap_case(case)
+    elif not token.feats:
+        return "___"
+    else:
+        # Log that we can't express all feats here
+        return "UNK"
+
+
+def gapped_mwe(
+        mwe: UdMwe,
+        use_jnk: bool = False,
+        strong_head: bool = False,
+        strong_start: str = "<strong>",
+        strong_end: str = "</strong>"
 ) -> str:
     bits = []
     for idx, token in enumerate(mwe.tokens):
+        bit = gapped_mwe_tok(token, use_jnk)
         is_headword = idx == mwe.headword_idx
-        if token.payload is not None:
-            if token.feats:
-                # TODO: Generator for nominals
-                generated = gen_verb_default_feats(token)
-                if not generated:
-                    # Log that we can't express all feats here
-                    bit = "UNK"
-                else:
-                    bit = "/".join(generated)
-            else:
-                bit = token.payload
-        elif token.feats.get("VerbForm") == "Inf":
-            if token.feats.get("InfForm") == "1":
-                if len(token.feats) > 2:
-                    # Log that we can't express all feats
-                    bit = "UNK"
-                else:
-                    bit = "___-da"
-            elif token.feats.get("InfForm") == "3":
-                if "Case" in token.feats:
-                    case = token.feats["Case"]
-                    mapped_normseg = CASE_NORMSEG[case]
-                    bit = "___-ma" + (mapped_normseg[1:] if mapped_normseg else "")
-                else:
-                    bit = "UNK"
-            else:
-                # Log that we can't express all feats
-                bit = "UNK"
-        elif token.feats.get("VerbForm") == "Part":
-            token.feats.pop("VerbForm", None)
-            tense = token.feats.pop("Tense", "Pres")
-            voice = token.feats.pop("Voice", "Act")
-            if len(token.feats):
-                # Log that we can't express all feats
-                bit = "UNK"
-            elif tense == "Pres" and voice == "Act":
-                bit = "___-va"
-            elif tense == "Pres" and voice == "Pass":
-                bit = "___-tava"
-            elif tense == "Past" and voice == "Act":
-                bit = "___-nut"
-            elif tense == "Past" and voice == "Pass":
-                bit = "___-ttu"
-            else:
-                assert False
-        elif "Case" in token.feats:
-            case = token.feats["Case"]
-            if len(token.feats) > 1:
-                # Log that we can't express all feats
-                bit = "UNK"
-            else:
-                if use_jnk:
-                    bit = jnk_case(case)
-                else:
-                    bit = gap_case(case)
-        elif not token.feats:
-            bit = "___"
-        else:
-            # Log that we can't express all feats here
-            bit = "UNK"
         if is_headword and strong_head:
             bit = strong_start + bit + strong_end
         bits.append(bit)
