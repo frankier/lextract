@@ -1,5 +1,17 @@
 [[package]]
 category = "main"
+description = "Amply allows you to load and manipulate AMPL/GLPK data as Python data structures"
+name = "amply"
+optional = false
+python-versions = "*"
+version = "0.1.2"
+
+[package.dependencies]
+docutils = ">=0.3"
+pyparsing = "*"
+
+[[package]]
+category = "main"
 description = "A small Python module for determining appropriate platform-specific dirs, e.g. a \"user data dir\"."
 name = "appdirs"
 optional = false
@@ -259,7 +271,7 @@ description = "File identification library for Python"
 name = "identify"
 optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,>=2.7"
-version = "1.5.2"
+version = "1.5.3"
 
 [package.extras]
 license = ["editdistance"]
@@ -679,10 +691,10 @@ description = "PuLP is an LP modeler written in python. PuLP can generate MPS or
 name = "pulp"
 optional = false
 python-versions = "*"
-version = "1.6.10"
+version = "2.3"
 
 [package.dependencies]
-pyparsing = ">=2.0.1"
+amply = ">=0.1.2"
 
 [[package]]
 category = "dev"
@@ -919,7 +931,7 @@ description = "Snakemake is a workflow management system that aims to reduce the
 name = "snakemake"
 optional = false
 python-versions = "*"
-version = "5.24.2"
+version = "5.25.0"
 
 [package.dependencies]
 appdirs = "*"
@@ -930,7 +942,7 @@ gitpython = "*"
 jsonschema = "*"
 nbformat = "*"
 psutil = "*"
-pulp = "<2.0"
+pulp = ">=2.0"
 pyyaml = "*"
 ratelimiter = "*"
 requests = "*"
@@ -1156,7 +1168,7 @@ wordfreq = "^2.2"
 pgsql = []
 
 [package.source]
-reference = "da443b90a4f483367d6d637039616371517f9fac"
+reference = "4f8e0edbce5c147d10842ad186eea95755d13f21"
 type = "git"
 url = "https://github.com/frankier/wikiparse.git"
 [[package]]
@@ -1201,11 +1213,15 @@ testing = ["jaraco.itertools", "func-timeout"]
 auto = ["pyahocorasick"]
 
 [metadata]
-content-hash = "ce025998921454935bd82e9a26ce51f49d08868099111a5cac5dfe46696afea7"
+content-hash = "51fe0955bae515d4b685838a1a07c3b684b0c1d1ba85e7dbe4004be79b2a815b"
 lock-version = "1.0"
 python-versions = "^3.7"
 
 [metadata.files]
+amply = [
+    {file = "amply-0.1.2-py3.7.egg", hash = "sha256:c93da6113cac809487abc6565f41e37b9b8a5d469dcfaf4443d8d35befb181af"},
+    {file = "amply-0.1.2.tar.gz", hash = "sha256:6e5d53af62772790ba82a989a3de72b8ce5c1cd809613c06f7cb061f7ec34dc8"},
+]
 appdirs = [
     {file = "appdirs-1.4.4-py2.py3-none-any.whl", hash = "sha256:a841dacd6b99318a741b166adb07e19ee71a274450e68237b4650ca1055ab128"},
     {file = "appdirs-1.4.4.tar.gz", hash = "sha256:7d5d0167b2b1ba821647616af46a749d1c653740dd0d2415100fe26e27afdf41"},
@@ -1327,8 +1343,8 @@ gitpython = [
     {file = "GitPython-3.1.8.tar.gz", hash = "sha256:080bf8e2cf1a2b907634761c2eaefbe83b69930c94c66ad11b65a8252959f912"},
 ]
 identify = [
-    {file = "identify-1.5.2-py2.py3-none-any.whl", hash = "sha256:e5cc8ba10ca658c278f841813c5f1556804141c93f82a7e620a938528a0c3f32"},
-    {file = "identify-1.5.2.tar.gz", hash = "sha256:56e70094705056ac75e66eb9f068beb323f4a31b24eb649cb1cf3126d138e35c"},
+    {file = "identify-1.5.3-py2.py3-none-any.whl", hash = "sha256:d02d004568c5a01261839a05e91705e3e9f5c57a3551648f9b3fb2b9c62c0f62"},
+    {file = "identify-1.5.3.tar.gz", hash = "sha256:c770074ae1f19e08aadbda1c886bc6d0cb55ffdc503a8c0fe8699af2fc9664ae"},
 ]
 idna = [
     {file = "idna-2.10-py2.py3-none-any.whl", hash = "sha256:b97d804b1e9b523befed77c48dacec60e6dcb0b5391d57af6a65a312a90648c0"},
@@ -1569,7 +1585,8 @@ psutil = [
     {file = "psutil-5.7.2.tar.gz", hash = "sha256:90990af1c3c67195c44c9a889184f84f5b2320dce3ee3acbd054e3ba0b4a7beb"},
 ]
 pulp = [
-    {file = "PuLP-1.6.10.zip", hash = "sha256:dd2ba8afbf12a811e03a0e87f248539a5b9500e27600abfc0684eb827b7d7a32"},
+    {file = "PuLP-2.3-py3-none-any.whl", hash = "sha256:1953894015ed3b9dfefea14a2fba1deef4b47138ef847d05c66ef9806f9fc3b4"},
+    {file = "PuLP-2.3.tar.gz", hash = "sha256:9d8ecf532868cc31fa9ff59ee5d5b2049600c5c902c18c794a2bad677c1f92e5"},
 ]
 py = [
     {file = "py-1.9.0-py2.py3-none-any.whl", hash = "sha256:366389d1db726cd2fcfc79732e75410e5fe4d31db13692115529d34069a043c2"},
@@ -1717,8 +1734,8 @@ smmap = [
     {file = "smmap-3.0.4.tar.gz", hash = "sha256:9c98bbd1f9786d22f14b3d4126894d56befb835ec90cef151af566c7e19b5d24"},
 ]
 snakemake = [
-    {file = "snakemake-5.24.2-py3-none-any.whl", hash = "sha256:e8fcf58372e64df701fca9f487acac5514f997fb0b54d46c9f2e51829d67b6dd"},
-    {file = "snakemake-5.24.2.tar.gz", hash = "sha256:286bffb315529071105ccca232cd4ac7079cbf99c9115c158bccaac1eca584c5"},
+    {file = "snakemake-5.25.0-py3-none-any.whl", hash = "sha256:b3060be5a7a88bf9e1b39e62315e8c06a831706f1a8a8883f83a49de0ab2c767"},
+    {file = "snakemake-5.25.0.tar.gz", hash = "sha256:6e9ba39038c0d64a6bba492e1646dda10f4826bd905a8b2aa93b18a6793b098b"},
 ]
 sqlalchemy = [
     {file = "SQLAlchemy-1.3.19-cp27-cp27m-macosx_10_14_x86_64.whl", hash = "sha256:f2e8a9c0c8813a468aa659a01af6592f71cd30237ec27c4cc0683f089f90dcfc"},
