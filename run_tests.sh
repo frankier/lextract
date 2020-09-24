@@ -1,1 +1,1 @@
-poetry run pytest tests/*.py
+poetry run python -m pytest tests/*.py

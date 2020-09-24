@@ -18,3 +18,4 @@ def setup_embed():
     application.
     """
     add_base()
+    add_mat()

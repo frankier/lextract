@@ -1,6 +1,7 @@
 from dataclasses import dataclass
-from typing import ClassVar, Dict, Iterator
+from typing import ClassVar, Dict, Iterator, cast
 from wikiparse.assoc import proc_assoc
+from wikiparse.assoc.models import AssocNode
 from wikiparse.context import ParseContext
 
 from ..db.queries import wiktionary_deriv_query
@@ -28,11 +29,9 @@ def wiktionary_deriv_wordlist(session) -> Iterator[UdMwe]:
         # TODO: Add in POS
         assocs = proc_assoc(ParseContext(word, None), raw)
         for assoc in assocs:
-            print("assoc", assoc)
             if not assoc.tree_has_gram:
                 continue
-            print()
-            for mwe in flatten(assoc.tree):
+            for mwe in flatten(cast(AssocNode, assoc.tree)):
                 yield from defn_mwes(
                     word,
                     mwe,

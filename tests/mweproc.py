@@ -1,6 +1,6 @@
 import pytest
 from lextract.mweproc.sources.wiktionary_defn import defn_mwes
-from wikiparse.assoc.models import TreeFragToken, AssocWord, walk, AssocSpanType
+from wikiparse.assoc.models import TreeFragToken, AssocWord, walk, AssocSpanType, PlusNode, WordType
 from wikiparse.assoc import proc_assoc
 from wikiparse.context import ParseContext
 from lextract.mweproc.models import MweType
@@ -117,3 +117,32 @@ def test_wikitionary_frame_e2e(lemma, pos, defn, ex, gap, headword_idx):
 # {{lb|fi|intransitive|(+ a person in partitive)|_|+ illative}} To [[be]]/[[come]] up to.
 #: ''[[vesi|Vesi]] '''ylsi''' [[minä|minua]] [[vyötärö]]ön.''
 #:: The water '''was up''' to my waist.
+
+OLLA_MUST_ASSOC_NODE = PlusNode(
+    children=[
+        AssocWord(
+            pos={'noun', 'adjective'},
+            inflection_bits={'case': ['genitive']}
+        ),
+        AssocWord(
+            word_type=WordType.headword,
+            pos={'verb'},
+            inflection_bits={'trans': ['intransitive'], 'pers': ['sg3']}
+        ),
+        AssocWord(
+            pos={'verb'},
+            inflection_bits={
+                'part': ['participle'],
+                'tense': ['present'],
+                'pass': ['passive']
+            }
+        )
+    ]
+)
+
+
+def test_olla_must_mwes():
+    from common import must_olla_mwe
+    mwes = must_olla_mwe()
+    assert len(mwes[0].tokens) == 3
+    assert mwes[0].tokens[-1].feats == {'Tense': 'Pres', 'Voice': 'Pass', 'VerbForm': 'Part'}

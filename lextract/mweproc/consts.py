@@ -1,1 +1,2 @@
 WILDCARD = "__WILDCARD__"
+SURF = "__SURF__"

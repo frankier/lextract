@@ -5,7 +5,7 @@ from more_itertools import chunked
 from ..mweproc.consts import WILDCARD
 from ..utils.lemmatise import fi_lemmatise
 from .utils import frozendict_append, frozendict_order_insert
-from lextract.keyed_db.tables import key_lemma as key_lemma_t, word as word_t, subword as subword_t
+from lextract.keyed_db.tables import tables
 from .queries import key_lemmas_query, word_subwords_query
 
 
@@ -13,29 +13,30 @@ LEMMAS_CHUNK_SIZE = 256
 
 
 def get_matchers(conn, all_lemmas):
-    query = key_lemmas_query
+    word_t = tables["word"]
+    subword_t = tables["subword"]
+    key_lemma_t = tables["key_lemma"]
+    query = key_lemmas_query()
     lemma_key_rows = conn.execute(query, params={"key_lemmas": list(all_lemmas)})
     key_lemmas = {}
     word_ids = []
     for row in lemma_key_rows:
-        word_id = row[word_t.c.id]
+        word_id = row[tables["word"].c.id]
         if word_id not in word_ids:
             word_ids.append(word_id)
         key_lemmas.setdefault(row[key_lemma_t.c.key_lemma], []).append(word_id)
     words = {}
-    word_subword_rows = conn.execute(word_subwords_query, params={"word_ids": word_ids})
+    word_subword_rows = conn.execute(word_subwords_query(), params={"word_ids": word_ids})
     for row in word_subword_rows:
         if row[word_t.c.id] not in words:
             words[row[word_t.c.id]] = {
+                "ud_mwe_id": row[word_t.c.ud_mwe_id],
                 "key_idx": row[word_t.c.key_idx],
-                "form": row[word_t.c.form],
-                "type": row[word_t.c.type],
-                "sources": row[word_t.c.sources],
-                "payload": row[word_t.c.payload],
+                "key_is_head": row[word_t.c.key_is_head],
                 "subwords": []
             }
         words[row[word_t.c.id]]["subwords"].append(
-            (row[subword_t.c.subword_idx], row[subword_t.c.form], row[subword_t.c.lemma_feats])
+            (row[subword_t.c.subword_idx], row[subword_t.c.lemma_feats])
         )
     return key_lemmas, words
 
@@ -73,10 +74,7 @@ def conllu_to_indexed(sent):
     for idx, tok in enumerate(sent):
         lemma_map.setdefault(tok["lemma"], []).append(idx)
         if tok["feats"] is not None:
-            all_feats = [[
-                (feat.lower(), val.upper())
-                for feat, val in tok["feats"].items()
-            ]]
+            all_feats = [list(tok["feats"].items())]
         else:
             all_feats = []
         all_lemma_feats.append({tok["lemma"]: all_feats})
@@ -102,7 +100,7 @@ def iter_match_cands(conn, lemma_map, all_lemma_feats):
 
 
 def key_matcher_feats(word, key_lemma):
-    subword_idx, _, matcher_lemma_feats = word["subwords"][word["key_idx"]]
+    subword_idx, matcher_lemma_feats = word["subwords"][word["key_idx"]]
     matcher_feats = matcher_lemma_feats[key_lemma]
     assert word["key_idx"] == subword_idx
     return matcher_feats
@@ -172,7 +170,7 @@ def select_tok_step(next_idx, extend_wildcards, all_lemma_feats, subwords, word_
         return {matchings}
     if word_idx < 0 or word_idx >= len(all_lemma_feats):
         return set()
-    idx, (subword_idx, _, matcher_lemma_feats) = subwords[matcher_idx]
+    idx, (subword_idx, matcher_lemma_feats) = subwords[matcher_idx]
     assert idx == subword_idx
     matches, is_wildcard_match = match_any(matcher_lemma_feats, all_lemma_feats[word_idx])
     all_matches = set()
@@ -232,6 +230,12 @@ def extract_deps(conn, sent, use_conllu_feats=False):
     make_tree_index(tree, tree_index)
     for lemma_idx, key_lemma, word in iter_match_cands(conn, lemma_map, all_lemma_feats):
         lemma_id = lemma_idx + 1
+        used_cands = frozenset((lemma_id,))
+        if word["key_is_head"]:
+            node = tree_index[lemma_idx]
+            head_idx = node.token["head"]
+            if head_idx != 0:
+                used_cands |= frozenset((head_idx,))
         matches = select_dep_step(
             all_lemma_feats,
             tree_index,
@@ -250,7 +254,7 @@ def select_dep_step(all_lemma_feats, tree_index, subwords, cand_set, used_cands,
         return {matchings}
     all_matches = set()
     for cand_id in cand_set - used_cands:
-        for idx, (subword_idx, _, matcher_lemma_feats) in enumerate(subwords):
+        for idx, (subword_idx, matcher_lemma_feats) in enumerate(subwords):
             assert idx == subword_idx
             if subword_idx in used_subwords:
                 continue

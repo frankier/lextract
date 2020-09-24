@@ -82,8 +82,8 @@ def defn_mwes(headword: str, assoc_node: AssocNode, headword_is_lemma=True, head
             if ud_case is None:
                 continue
             feats_vals.setdefault("Case", []).append(ud_case.title())
-        pers = assoc_word.inflection_bits.get("pers", [None])[0]
-        personal = assoc_word.inflection_bits.get("personal", [None])[0]
+        pers = assoc_word.inflection_bits["pers"][0] if "pers" in assoc_word.inflection_bits else None
+        personal = assoc_word.inflection_bits["personal"][0] if "personal" in assoc_word.inflection_bits else None
         if pers is not None or personal == "impersonal":
             if pers is not None:
                 assert pers == "sg3"
@@ -139,6 +139,9 @@ def defn_mwes(headword: str, assoc_node: AssocNode, headword_is_lemma=True, head
             options.append(UdMweToken(feats=feats, **extra))
         if options:
             conf_net.append(options)
+        else:
+            # TODO: Log skipping token due to no options
+            pass
         
         #assoc_word.inflection_bits
         #assoc_word.word_type

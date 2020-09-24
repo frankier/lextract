@@ -135,3 +135,23 @@ def headword_grouped(headwords=None, typ=None):
     if typ is not None:
         query = query.where(tables["ud_mwe"].c.typ.in_(typ))
     return query
+
+
+def mwe_for_indexing():
+    # TODO: Once frequency information is included we can select the index token at query time
+    return select([
+        tables["ud_mwe"].c.id,
+        tables["ud_mwe"].c.headword_idx,
+        tables["ud_mwe_token"].c.payload,
+        tables["ud_mwe_token"].c.payload_is_lemma,
+        tables["ud_mwe_token"].c.poses,
+        tables["ud_mwe_token"].c.feats,
+    ]).select_from(
+        tables["ud_mwe"].join(
+            tables["ud_mwe_token"],
+            tables["ud_mwe_token"].c.mwe_id == tables["ud_mwe"].c.id
+        )
+    ).order_by(
+        tables["ud_mwe"].c.id,
+        tables["ud_mwe_token"].c.subword_idx
+    )

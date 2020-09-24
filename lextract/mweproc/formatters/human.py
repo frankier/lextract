@@ -94,10 +94,11 @@ def gapped_mwe_tok(
             # Log that we can't express all feats
             return "UNK"
     elif token.feats.get("VerbForm") == "Part":
-        token.feats.pop("VerbForm", None)
-        tense = token.feats.pop("Tense", "Pres")
-        voice = token.feats.pop("Voice", "Act")
-        if len(token.feats):
+        feats = token.feats.copy()
+        feats.pop("VerbForm", None)
+        tense = feats.pop("Tense", "Pres")
+        voice = feats.pop("Voice", "Act")
+        if len(feats):
             # Log that we can't express all feats
             return "UNK"
         elif tense == "Pres" and voice == "Act":
@@ -141,7 +142,6 @@ def gapped_mwe(
         if is_headword and strong_head:
             bit = strong_start + bit + strong_end
         bits.append(bit)
-    print("bits", bits)
     return " ".join(bits)
 
 

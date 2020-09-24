@@ -48,7 +48,9 @@ def get_poses(headword):
 
 def guess_headword(ud_mwe: UdMwe):
     candidate_idxs = []
-    mwe = ud_mwe.links[0].headword
+    link = ud_mwe.links[0]
+    assert isinstance(link, WordNetHeadwordLink)
+    mwe = link.headword
     mwe_poses = get_poses(mwe)
     for token_idx, token in enumerate(ud_mwe.tokens):
         if token.payload is None:

@@ -1,15 +1,18 @@
+from typing import List, Optional, Set
+
 from boltons.dictutils import FrozenDict
 from wikiparse.utils.db import get_session
 from sqlalchemy import select, func
 import conllu
 import pytest
 
-from lextract.utils.lemmatise import fi_lemmatise
-from lextract.mweproc.core import index_wordlist
-from lextract.keyed_db.builddb import insert_indexed
+from lextract.keyed_db.queries import mwe_ids_as_gapped_mwes
+from lextract.mweproc.db.muts import insert_mwe
+from lextract.mweproc.db.queries import mwe_for_indexing
+from lextract.mweproc.models import MweType, UdMwe, UdMweToken
+from lextract.mweproc.sources.common import build_simple_mwe
+from lextract.keyed_db.builddb import add_keyed_words, IndexingResult
 from lextract.keyed_db.extract import extract_deps, extract_toks
-from lextract.keyed_db.tables import metadata, word as word_t
-
 
 fd = FrozenDict
 
@@ -27,73 +30,113 @@ TEST_WORDS = [
 ]
 
 
-def create_phrase_test_db(db_path):
-    session = get_session(db_path)
-    metadata.create_all(session().get_bind().engine)
-    insert_indexed(
-        session,
-        index_wordlist(
-            [(w, ["test"]) for w in TEST_WORDS],
-            fi_lemmatise
-        )
+def mk_test_mwe(hw_bits, headword_idx):
+    if len(hw_bits) > 1:
+        typ = MweType.multiword
+    else:
+        typ = MweType.inflection
+    mwe = build_simple_mwe(
+        hw_bits,
+        typ=typ,
+        links=[],
+        headword_idx=headword_idx,
     )
+    return mwe
+
+
+def create_db(db_path):
+    from lextract.mweproc.db.tables import metadata as mweproc_metadata
+    session = get_session(db_path)
+    engine = session().get_bind().engine
+    mweproc_metadata.create_all(engine)
+    return session
+
+
+def create_phrase_test_db(db_path):
+    session = create_db(db_path)
+    hw_cnts_cache = {}
+    for word in TEST_WORDS:
+        mwe = mk_test_mwe(word, 0)
+        insert_mwe(
+            session,
+            mwe,
+            hw_cnts_cache,
+            freqs=False,
+            materialize=True
+        )
+    session.commit()
+    mwe_it = session.execute(mwe_for_indexing())
+    for indexing_result in add_keyed_words(session, mwe_it, True, True, False):
+        assert indexing_result != IndexingResult.FAIL
+    session.commit()
     return session
 
 
 TEST_FRAMES = [
     (
         'pitää ___-ta ___-na',
-        ('wiktionary_frames',),
-        'frame',
         0,
         [
-            ('pitää', {'pitää': {()}}),
-            ('partitive', {'__WILDCARD__': {(('case', 'PAR'),)}}),
-            ('essive', {'__WILDCARD__': {(('case', 'ESS'),)}})
+            ('pitää', {}),
+            (None, {'Case': 'Par'}),
+            (None, {'Case': 'Ess'})
         ],
-        {'type': 'wiktionary_frame', 'sense_id': 70087}
     ),
     (
         'pitää ___-sta kiinni',
-        ('wiktionary_frames',),
-        'frame',
         0,
         [
-            ('pitää', {'pitää': {()}}),
-            ('elative', {'__WILDCARD__': {(('case', 'ELA'),)}}),
-            ('kiinni', {'kiinni': {()}})
+            ('pitää', {}),
+            (None, {'Case': 'Ela'}),
+            ('kiinni', {})
         ],
-        {'type': 'wiktionary_frame', 'sense_id': 70090}
     ),
     (
         'pitää ___-sta',
-        ('wiktionary_frames',),
-        'frame',
         0,
         [
-            ('pitää', {'pitää': {()}}),
-            ('elative', {'__WILDCARD__': {(('case', 'ELA'),)}})
+            ('pitää', {}),
+            (None, {'Case': 'Ela'})
         ],
-        {'type': 'wiktionary_frame', 'sense_id': 70086}
     ),
     (
         'kummuta ___-sta',
-        ('wiktionary_frames',),
-        'frame',
         0,
         [
-            ('kummuta', {'kummuta': {()}}),
-            ('elative', {'__WILDCARD__': {(('case', 'ELA'),)}})
+            ('kummuta', {}),
+            (None, {'Case': 'Ela'})
         ],
-        {'type': 'wiktionary_frame', 'sense_id': 169567}
     ),
 ]
 
 
 def create_frame_test_db(db_path):
-    session = get_session(db_path)
-    metadata.create_all(session().get_bind().engine)
-    insert_indexed(session, TEST_FRAMES)
+    session = create_db(db_path)
+    hw_cnts_cache = {}
+    for gapped, headword_idx, subwords in TEST_FRAMES:
+        mwe = UdMwe(
+            tokens=[
+                UdMweToken(
+                    payload=payload,
+                    feats=feats,
+                )
+                for payload, feats in subwords
+            ],
+            typ=MweType.frame,
+            headword_idx=headword_idx
+        )
+        insert_mwe(
+            session,
+            mwe,
+            hw_cnts_cache,
+            freqs=False,
+            materialize=True
+        )
+    session.commit()
+    mwe_it = session.execute(mwe_for_indexing())
+    for indexing_result in add_keyed_words(session, mwe_it, True, True, False):
+        assert indexing_result != IndexingResult.FAIL
+    session.commit()
     return session
 
 
@@ -108,37 +151,43 @@ def frame_testdb():
 
 
 def test_insert_worked(phrase_testdb):
+    from lextract.keyed_db.tables import tables
     word_count = phrase_testdb.execute(
-        select([func.count(word_t.c.id)])
+        select([func.count(tables["word"].c.id)])
     ).scalar()
-    assert word_count == 4
+    assert word_count == 5
 
 
-def assert_token_matches(matches, expected_matches):
+def assert_token_matches(session, matches, expected_matches):
     assert len(matches) == len(expected_matches)
-    for (matchings, word), (expected_matchings, expected_match_form) in zip(matches, expected_matches):
-        assert matchings == expected_matchings
-        assert word["form"] == expected_match_form
-
-
-def assert_dep_matches(matches, expected_matches):
-    assert len(matches) == len(expected_matches)
+    gapped_query = mwe_ids_as_gapped_mwes()
+    actual_matches = set()
     for matchings, word in matches:
-        assert word["form"] in expected_matches
-        assert {expected_matches[word["form"]]} == matchings
+        gapped_mwe = next(session.execute(gapped_query, params={"ud_mwe_id": word["ud_mwe_id"]}))[0]
+        actual_matches.add((frozenset(matchings), gapped_mwe))
+    assert actual_matches == set(expected_matches)
+
+
+def assert_dep_matches(session, matches, expected_matches):
+    assert len(matches) == len(expected_matches)
+    gapped_query = mwe_ids_as_gapped_mwes()
+    for matchings, word in matches:
+        gapped_mwe = next(session.execute(gapped_query, params={"ud_mwe_id": word["ud_mwe_id"]}))[0]
+        assert gapped_mwe in expected_matches
+        assert {expected_matches[gapped_mwe]} == matchings
 
 
 @pytest.mark.parametrize(
     "toks,expected_matches",
     [
-        (["humaloissa"], [({fd({0: fs(0)})}, "humalassa")]),
-        (["älä", "tule", "humalaan"], [({fd({0: fs(1), 1: fs(2)})}, "tulla humalaan"), ({fd({0: fs(2)})}, "humalaan")]),
-        (["tulevasta"], [({fd({0: fs(0)})}, "tuleva")]),
+        (["humaloissa"], [(fs(fd({0: fs(0)})), "humalassa")]),
+        (["älä", "tule", "humalaan"], [(fs(fd({0: fs(1), 1: fs(2)})), "tulla humalaan"), (fs(fd({0: fs(2)})), "humalaan")]),
+        (["tulevasta"], [(fs(fd({0: fs(0)})), "tuleva")]),
     ],
 )
 def test_token_matches(phrase_testdb, toks, expected_matches):
     matches = list(extract_toks(phrase_testdb, toks))
-    assert_token_matches(matches, expected_matches)
+    assert_token_matches(phrase_testdb, matches, expected_matches)
 
 
 CONLLS = """
@@ -184,7 +233,7 @@ CONLLS = """
 def test_dep_matches(phrase_testdb, use_conllu_feats, conll, expected_matches):
     sent = conllu.parse(conll)[0]
     matches = list(extract_deps(phrase_testdb, sent, use_conllu_feats=use_conllu_feats))
-    assert_dep_matches(matches, expected_matches)
+    assert_dep_matches(phrase_testdb, matches, expected_matches)
 
 
 @pytest.mark.parametrize(
@@ -192,32 +241,32 @@ def test_dep_matches(phrase_testdb, use_conllu_feats, conll, expected_matches):
     [
         (
             ["Minä", "pidän", "voileipäkakusta"],
-            [({fd({0: fs(1), 1: fs(2)})}, 'pitää ___-sta')]
+            [(fs(fd({0: fs(1), 1: fs(2)})), 'pitää ___-sta')]
         ),
         (
             ["Minä", "pidän", "herkullisesta", "voileipäkakusta"],
-            [({fd({0: fs(1), 1: fs(2, 3)}), fd({0: fs(1), 1: fs(2)})}, 'pitää ___-sta')]
+            [(fs(fd({0: fs(1), 1: fs(2, 3)}), fd({0: fs(1), 1: fs(2)})), 'pitää ___-sta')]
         ),
         (
             ["Minä", "voin", "pitää", "laukustasi", "kiinni", "."],
             [
-                ({fd({0: fs(2), 1: fs(3), 2: fs(4)})}, 'pitää ___-sta kiinni'),
-                ({fd({0: fs(2), 1: fs(3)})}, 'pitää ___-sta')
+                (fs(fd({0: fs(2), 1: fs(3), 2: fs(4)})), 'pitää ___-sta kiinni'),
+                (fs(fd({0: fs(2), 1: fs(3)})), 'pitää ___-sta')
             ]
         ),
         (
             ["Minä", "pidän", "ihmisiä", "vihamielisinä"],
-            [({fd({0: fs(1), 1: fs(2), 2: fs(3)})}, 'pitää ___-ta ___-na')]
+            [(fs(fd({0: fs(1), 1: fs(2), 2: fs(3)})), 'pitää ___-ta ___-na')]
         ),
         (
             ["Minä", "pidän", "siistiä", "ihmisiä", "vihamielisinä"],
-            [({fd({0: fs(1), 1: fs(2, 3), 2: fs(4)})}, 'pitää ___-ta ___-na')]
+            [(fs(fd({0: fs(1), 1: fs(2, 3), 2: fs(4)})), 'pitää ___-ta ___-na')]
         ),
     ],
 )
 def test_token_frame_matches(frame_testdb, toks, expected_matches):
     matches = list(extract_toks(frame_testdb, toks))
-    assert_token_matches(matches, expected_matches)
+    assert_token_matches(frame_testdb, matches, expected_matches)
 
 
 @pytest.mark.parametrize(
@@ -255,9 +304,26 @@ def test_token_frame_matches(frame_testdb, toks, expected_matches):
 def test_dep_frame_matches(frame_testdb, use_conllu_feats, conll, expected_matches):
     sent = conllu.parse(conll)[0]
     matches = list(extract_deps(frame_testdb, sent, use_conllu_feats=use_conllu_feats))
-    assert_dep_matches(matches, expected_matches)
+    assert_dep_matches(frame_testdb, matches, expected_matches)
 
 
 def test_longest_matches():
     from lextract.keyed_db.extract import longest_matches
     assert longest_matches({fd({0: fs(1), 1: fs(2, 3)}), fd({0: fs(1), 1: fs(2)})}) == {fd({0: fs(1), 1: fs(2, 3)})}
+
+
+def test_olla_must():
+    from common import must_olla_mwe
+    session = create_db("sqlite://")
+    mwes = must_olla_mwe()
+    for mwe in mwes:
+        insert_mwe(
+            session,
+            mwe,
+            {},
+            freqs=False,
+            materialize=True
+        )
+    session.commit()
+    last_row = list(session.execute(mwe_for_indexing()))[-1]
+    assert last_row[-1] == {'Tense': 'Pres', 'Voice': 'Pass', 'VerbForm': 'Part'}
