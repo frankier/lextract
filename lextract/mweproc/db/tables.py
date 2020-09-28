@@ -1,6 +1,7 @@
 from sqlalchemy import Column, String, MetaData, Table, ForeignKey, Integer, JSON, Boolean, Float
 from sqlalchemy.types import Enum
 from sqlalchemy.schema import UniqueConstraint
+from lextract.utils.core import run_once
 from ..models import MweType
 
 metadata = MetaData()
@@ -20,6 +21,7 @@ def contribute_to_table(name, *cols):
         tables[name].append_column(col)
 
 
+@run_once
 def add_base():
     add_table(
         "ud_mwe",
@@ -57,6 +59,7 @@ def add_base():
     )
 
 
+@run_once
 def add_freq():
     add_table(
         "headword_freq",
@@ -107,6 +110,7 @@ def add_freq():
     )
 
 
+@run_once
 def add_mat():
     add_table(
         "mwe_fmt",
