@@ -23,7 +23,7 @@ def listify_poses(poses):
 
 def insert_mwe(session, mwe: UdMwe, hw_cnts_cache, freqs=False, materialize=False):
     gap_mwe = gapped_mwe(mwe)
-    logger.info(f"Inserting %s", gap_mwe)
+    logger.info("Inserting %s", gap_mwe)
     mwe_id = insert_get_id(
         session,
         tables["ud_mwe"],
