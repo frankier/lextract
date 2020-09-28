@@ -26,9 +26,11 @@ class WiktionaryDefnLink:
         }
 
 
-def wiktionary_defn_wordlist(session, lemmatise=fi_lemmatise):
+def wiktionary_defn_wordlist(session, headwords, lemmatise=fi_lemmatise):
     grams = session.execute(wiktionary_gram_query)
     for word, sense_id, pos, extra in grams:
+        if headwords is not None and word not in headwords:
+            continue
         links = [WiktionaryDefnLink(word, sense_id, pos)]
         assocs = proc_assoc(ParseContext(word, pos), extra["raw_defn"])
         for assoc in assocs:

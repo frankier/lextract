@@ -1,6 +1,6 @@
 import pytest
 from lextract.mweproc.sources.wiktionary_defn import defn_mwes
-from wikiparse.assoc.models import TreeFragToken, AssocWord, walk, AssocSpanType, PlusNode, WordType
+from wikiparse.assoc.models import AssocWord, AssocSpanType, PlusNode, WordType
 from wikiparse.assoc import proc_assoc
 from wikiparse.context import ParseContext
 from lextract.mweproc.models import MweType

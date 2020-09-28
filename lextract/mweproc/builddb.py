@@ -9,7 +9,7 @@ from .db.confs import setup_dist, setup_embed
 from .db.tables import metadata
 from .db.muts import insert_mwe
 from ..utils.db import get_connection
-from wikiparse.cmd.parse import mod_data_opt, fsts_dir_opt
+from wikiparse.cmd.parse import mod_data_opt, fsts_dir_opt, parse_filterfile
 
 logger = logging.getLogger(__name__)
 click_log.basic_config(logger)
@@ -19,16 +19,18 @@ BATCH_SIZE = 50000
 
 @click.command()
 @click.option("--embed/--dist")
-@click.option("--skip-freqs/--dist", is_flag=True)
+@click.option("--skip-freqs/--include-freqs", is_flag=True)
 @click.option("--wl", type=click.Choice(WORDLIST_NAMES), multiple=True,
               default=WORDLIST_NAMES)
+@click.option("--headwords", type=click.File("r"))
 @mod_data_opt
 @fsts_dir_opt
 @click_log.simple_verbosity_option(logger)
-def builddb(embed, skip_freqs, wl):
+def builddb(embed, skip_freqs, wl, headwords):
     """
     Insert MWEs into database
     """
+    headwords_list = parse_filterfile(headwords)
     conn = get_connection()
     if embed:
         setup_embed()
@@ -44,7 +46,7 @@ def builddb(embed, skip_freqs, wl):
         wikiparse_conn = get_connection(wikiparse_db)
     else:
         wikiparse_conn = conn
-    mwes = all_wordlists(wikiparse_conn, wl)
+    mwes = all_wordlists(wikiparse_conn, wl, headwords_list)
     if logger.isEnabledFor(logging.INFO):
         ctx = contextlib.nullcontext(mwes)
     else:
@@ -54,7 +56,6 @@ def builddb(embed, skip_freqs, wl):
         hw_cnts_cache = {}
         try:
             for idx, (ud_mwe, mwe_wls) in enumerate(mwes_wrap):
-                print(ud_mwe, mwe_wls)
                 insert_mwe(
                     conn,
                     ud_mwe,

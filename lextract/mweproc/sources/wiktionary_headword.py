@@ -19,9 +19,11 @@ class WiktionaryHeadwordLink:
         }
 
 
-def wiktionary_hw_wordlist(session) -> Iterator[UdMwe]:
+def wiktionary_hw_wordlist(session, headwords) -> Iterator[UdMwe]:
     headwords = session.execute(wiktionary_defined_headword_query)
-    for (word, redlink, has_senses) in headwords:
+    for word, redlink, has_senses in headwords:
+        if headwords is not None and word not in headwords:
+            continue
         word_bits = word.split(" ")
         # TODO: Add in type information from Wiktionary
         # TODO: Follow derived term parent to get headword

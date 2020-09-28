@@ -19,10 +19,12 @@ class WiktionaryDerivLink:
         }
 
 
-def wiktionary_deriv_wordlist(session) -> Iterator[UdMwe]:
+def wiktionary_deriv_wordlist(session, headwords) -> Iterator[UdMwe]:
     from .wiktionary_defn import flatten, defn_mwes
     derivs = session.execute(wiktionary_deriv_query)
     for (word, disp, gloss, extra) in derivs:
+        if headwords is not None and word not in headwords:
+            continue
         raw = extra["grams"][0]["span"]["payload"]
         print("deriv", word, raw)
         links = [WiktionaryDerivLink(word)]

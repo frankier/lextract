@@ -71,13 +71,16 @@ def guess_headword(ud_mwe: UdMwe):
     return ud_mwe
 
 
-def wordnet_wordlist() -> Iterator[UdMwe]:
-    return map(guess_headword, wordnet_wordlist_bare())
+def wordnet_wordlist(headwords) -> Iterator[UdMwe]:
+    return map(guess_headword, wordnet_wordlist_bare(headwords))
 
 
-def wordnet_wordlist_bare() -> Iterator[UdMwe]:
+def wordnet_wordlist_bare(headwords) -> Iterator[UdMwe]:
     for headword in FinWordnet.lemma_names().keys():
         hw_bits = split_headword(headword)
+        headword_space = " ".join(hw_bits)
+        if headwords is not None and headword_space not in headwords:
+            continue
         typ = classify_headword(hw_bits)
         links = [WordNetHeadwordLink(headword)]
         poses = get_lemma_objs(headword)

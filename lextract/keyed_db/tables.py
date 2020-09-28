@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, MetaData, Table, Float, ForeignKey, Integer, JSON, Boolean
+from sqlalchemy import Column, String, MetaData, Table, ForeignKey, Integer, JSON, Boolean
 
 
 tables = {}
