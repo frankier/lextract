@@ -14,7 +14,7 @@ before_script:
   - docker info || true
   - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY || true
 
-test:nose2:
+test:pytest:
   stage: test
   image: $CI_REGISTRY/frankier/wikiparse:latest
   script:
