@@ -18,7 +18,7 @@ test:pytest:
   stage: test
   image: $CI_REGISTRY/frankier/wikiparse:latest
   script:
-    - ./run_tests.sh
+    - python -m pytest tests/*.py
 
 test:flake8:
   stage: test
