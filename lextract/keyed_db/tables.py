@@ -9,6 +9,8 @@ from sqlalchemy import (
     Boolean,
 )
 
+from lextract.utils.core import run_once
+
 
 tables = {}
 
@@ -44,6 +46,7 @@ def create_tables(metadata=None):
     return metadata
 
 
+@run_once
 def extend_mweproc():
     from lextract.mweproc.db.confs import setup_embed
     from lextract.mweproc.db.tables import metadata as mweproc_metadata
