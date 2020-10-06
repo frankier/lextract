@@ -14,14 +14,28 @@ before_script:
   - docker info || true
   - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY || true
 
+build:
+  stage: build
+  script:
+    - docker pull $CI_REGISTRY_IMAGE:latest || true
+    - docker build --cache-from $CI_REGISTRY_IMAGE:latest -t eval -f Dockerfile .
+    - docker tag eval $CI_REGISTRY_IMAGE
+    - docker push $CI_REGISTRY_IMAGE
+
+test:typecheck:
+  stage: test
+  image: $CI_REGISTRY_IMAGE
+  script:
+    - mypy wikiparse parse.py
+
 test:pytest:
   stage: test
-  image: $CI_REGISTRY/frankier/wikiparse:latest
+  image: $CI_REGISTRY_IMAGE
   script:
     - python -m pytest tests/*.py
 
 test:flake8:
   stage: test
-  image: $CI_REGISTRY/frankier/wikiparse:latest
+  image: $CI_REGISTRY_IMAGE
   script:
     - flake8
