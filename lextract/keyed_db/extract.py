@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Dict, List
 from boltons.dictutils import FrozenDict
 from more_itertools import chunked
 
@@ -26,14 +26,16 @@ def get_matchers(conn, all_lemmas):
             word_ids.append(word_id)
         key_lemmas.setdefault(row[key_lemma_t.c.key_lemma], []).append(word_id)
     words = {}
-    word_subword_rows = conn.execute(word_subwords_query(), params={"word_ids": word_ids})
+    word_subword_rows = conn.execute(
+        word_subwords_query(), params={"word_ids": word_ids}
+    )
     for row in word_subword_rows:
         if row[word_t.c.id] not in words:
             words[row[word_t.c.id]] = {
                 "ud_mwe_id": row[word_t.c.ud_mwe_id],
                 "key_idx": row[word_t.c.key_idx],
                 "key_is_head": row[word_t.c.key_is_head],
-                "subwords": []
+                "subwords": [],
             }
         words[row[word_t.c.id]]["subwords"].append(
             (row[subword_t.c.subword_idx], row[subword_t.c.lemma_feats])
@@ -120,7 +122,7 @@ def match_any(matcher_lemma_feats, cand_lemma_feats):
                 cand_feats
                 for cand_feats_list in cand_lemma_feats.values()
                 for cand_feats in cand_feats_list
-            )
+            ),
         ):
             return True, True
 
@@ -129,12 +131,21 @@ def match_any(matcher_lemma_feats, cand_lemma_feats):
 
 def extract_toks(conn, surfs: List[str], extend_wildcards=True):
     lemma_map, all_lemma_feats = index_sentence(surfs)
-    return extract_toks_indexed(conn, lemma_map, all_lemma_feats, extend_wildcards=extend_wildcards)
+    return extract_toks_indexed(
+        conn, lemma_map, all_lemma_feats, extend_wildcards=extend_wildcards
+    )
 
 
-def extract_toks_indexed(conn, lemma_map: Dict[str, int], all_lemma_feats: List[Dict[str, str]], extend_wildcards=True):
+def extract_toks_indexed(
+    conn,
+    lemma_map: Dict[str, int],
+    all_lemma_feats: List[Dict[str, str]],
+    extend_wildcards=True,
+):
     key_lemmas, words = get_matchers(conn, lemma_map)
-    for lemma_idx, key_lemma, word in iter_match_cands(conn, lemma_map, all_lemma_feats):
+    for lemma_idx, key_lemma, word in iter_match_cands(
+        conn, lemma_map, all_lemma_feats
+    ):
         # Check lemma and feats for other lemmas
         subwords = list(enumerate(word["subwords"]))
 
@@ -148,6 +159,7 @@ def extract_toks_indexed(conn, lemma_map: Dict[str, int], all_lemma_feats: List[
                 word["key_idx"] + dir,
                 FrozenDict(),
             )
+
         left_matches = step(-1)
         if not left_matches:
             continue
@@ -161,18 +173,28 @@ def extract_toks_indexed(conn, lemma_map: Dict[str, int], all_lemma_feats: List[
                 for left_matching in left_matches
                 for right_matching in right_matches
             },
-            word
+            word,
         )
 
 
-def select_tok_step(next_idx, extend_wildcards, all_lemma_feats, subwords, word_idx, matcher_idx, matchings):
+def select_tok_step(
+    next_idx,
+    extend_wildcards,
+    all_lemma_feats,
+    subwords,
+    word_idx,
+    matcher_idx,
+    matchings,
+):
     if matcher_idx < 0 or matcher_idx >= len(subwords):
         return {matchings}
     if word_idx < 0 or word_idx >= len(all_lemma_feats):
         return set()
     idx, (subword_idx, matcher_lemma_feats) = subwords[matcher_idx]
     assert idx == subword_idx
-    matches, is_wildcard_match = match_any(matcher_lemma_feats, all_lemma_feats[word_idx])
+    matches, is_wildcard_match = match_any(
+        matcher_lemma_feats, all_lemma_feats[word_idx]
+    )
     all_matches = set()
     if not matches:
         return all_matches
@@ -212,8 +234,12 @@ def make_tree_index(tree, index):
 def expand_node(tree_index, lemma_idx, cand_set=frozenset()):
     node = tree_index[lemma_idx]
     return cand_set | frozenset(
-        ([tree_index[node.token["head"]].token["id"]] if node.token["head"] != 0 else []) + 
-        [child.token["id"] for child in node.children]
+        (
+            [tree_index[node.token["head"]].token["id"]]
+            if node.token["head"] != 0
+            else []
+        )
+        + [child.token["id"] for child in node.children]
     )
 
 
@@ -228,7 +254,9 @@ def extract_deps(conn, sent, use_conllu_feats=False):
         lemma_map, all_lemma_feats = index_sentence((token["form"] for token in sent))
     tree_index = {}
     make_tree_index(tree, tree_index)
-    for lemma_idx, key_lemma, word in iter_match_cands(conn, lemma_map, all_lemma_feats):
+    for lemma_idx, key_lemma, word in iter_match_cands(
+        conn, lemma_map, all_lemma_feats
+    ):
         lemma_id = lemma_idx + 1
         used_cands = frozenset((lemma_id,))
         if word["key_is_head"]:
@@ -243,13 +271,22 @@ def extract_deps(conn, sent, use_conllu_feats=False):
             expand_node(tree_index, lemma_id),
             frozenset((lemma_id,)),
             frozenset((word["key_idx"],)),
-            FrozenDict(((word["key_idx"], frozenset((lemma_idx,))),))
+            FrozenDict(((word["key_idx"], frozenset((lemma_idx,))),)),
         )
         if matches:
             yield matches, word
 
 
-def select_dep_step(all_lemma_feats, tree_index, subwords, cand_set, used_cands, used_subwords, matchings, extend_wildcards=True):
+def select_dep_step(
+    all_lemma_feats,
+    tree_index,
+    subwords,
+    cand_set,
+    used_cands,
+    used_subwords,
+    matchings,
+    extend_wildcards=True,
+):
     if len(used_subwords) == len(subwords):
         return {matchings}
     all_matches = set()
@@ -258,7 +295,9 @@ def select_dep_step(all_lemma_feats, tree_index, subwords, cand_set, used_cands,
             assert idx == subword_idx
             if subword_idx in used_subwords:
                 continue
-            matches, is_wildcard_match = match_any(matcher_lemma_feats, all_lemma_feats[cand_id - 1])
+            matches, is_wildcard_match = match_any(
+                matcher_lemma_feats, all_lemma_feats[cand_id - 1]
+            )
             if not matches:
                 continue
             new_cand_set = expand_node(tree_index, cand_id, cand_set)
@@ -274,25 +313,33 @@ def select_dep_step(all_lemma_feats, tree_index, subwords, cand_set, used_cands,
                 )
                 new_cand_set = new_cand_set | extra_cand_set
                 for extra_match in extra_matched:
-                    new_matchings = frozendict_order_insert(new_matchings, subword_idx, extra_match)
-            all_matches.update(select_dep_step(
-                all_lemma_feats,
-                tree_index,
-                subwords,
-                new_cand_set,
-                new_used_cands,
-                used_subwords | {subword_idx},
-                new_matchings
-            ))
+                    new_matchings = frozendict_order_insert(
+                        new_matchings, subword_idx, extra_match
+                    )
+            all_matches.update(
+                select_dep_step(
+                    all_lemma_feats,
+                    tree_index,
+                    subwords,
+                    new_cand_set,
+                    new_used_cands,
+                    used_subwords | {subword_idx},
+                    new_matchings,
+                )
+            )
     return all_matches
 
 
-def expand_wildcard_dep(all_lemma_feats, tree_index, wildcard_lemma_feats, cand_set, used_cands):
+def expand_wildcard_dep(
+    all_lemma_feats, tree_index, wildcard_lemma_feats, cand_set, used_cands
+):
     matched = []
     while 1:
         changed = False
         for cand_id in cand_set - used_cands:
-            matches, is_wildcard_match = match_any(wildcard_lemma_feats, all_lemma_feats[cand_id - 1])
+            matches, is_wildcard_match = match_any(
+                wildcard_lemma_feats, all_lemma_feats[cand_id - 1]
+            )
             if not matches:
                 continue
             assert is_wildcard_match

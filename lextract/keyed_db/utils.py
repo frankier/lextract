@@ -2,9 +2,7 @@ from boltons.dictutils import FrozenDict
 
 
 def frozendict_append(fd, k, v):
-    return fd.updated({
-        k: fd.get(k, frozenset()) | frozenset((v,))
-    })
+    return fd.updated({k: fd.get(k, frozenset()) | frozenset((v,))})
 
 
 def frozendict_order_insert(fd, new_key, new_value):

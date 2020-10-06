@@ -1,4 +1,9 @@
-from lextract.aho_corasick.models import UntokenizedTagging, TokenizedTagging, Anchor, TaggedLemma
+from lextract.aho_corasick.models import (
+    UntokenizedTagging,
+    TokenizedTagging,
+    Anchor,
+    TaggedLemma,
+)
 from lextract.wordnet import ExtractableWordnet, objify_lemmas
 from ahocorasick import Automaton
 from typing import Dict, Type, Iterator, Tuple, List

@@ -15,7 +15,9 @@ def get_connection(db=None):
         db = os.getenv("DATABASE_URL")
         if db is None:
             raise RuntimeError("DATABASE_URL not set")
-    engine = create_engine(db, execution_options={"autocommit": False, "compiled_cache": _query_cache})
+    engine = create_engine(
+        db, execution_options={"autocommit": False, "compiled_cache": _query_cache}
+    )
 
     return engine.connect()
 

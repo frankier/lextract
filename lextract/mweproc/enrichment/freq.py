@@ -5,9 +5,13 @@ from typing import Optional, Tuple
 
 def headword_freq(mwe: UdMwe) -> Optional[Tuple[float, float]]:
     return (
-        word_frequency(mwe.headword.payload, 'fi'),
-        zipf_frequency(mwe.headword.payload, 'fi'),
-    ) if mwe.headword else None
+        (
+            word_frequency(mwe.headword.payload, "fi"),
+            zipf_frequency(mwe.headword.payload, "fi"),
+        )
+        if mwe.headword
+        else None
+    )
 
 
 def turkudepsearch_propbank_freqs(query: str):

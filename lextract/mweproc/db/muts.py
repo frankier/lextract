@@ -5,7 +5,7 @@ from ..enrichment.freq import (
     turkudepsearch_freq,
     turkudepsearch_headword_freq,
     turkudepsearch_propbank_freqs,
-    turkudepsearch_propbank_headword_freqs
+    turkudepsearch_propbank_headword_freqs,
 )
 from ..formatters.human import gapped_mwe, pos_template
 from ..formatters.turkudepsearch import tds, tds_tok
@@ -29,7 +29,7 @@ def insert_mwe(session, mwe: UdMwe, hw_cnts_cache, freqs=False, materialize=Fals
         tables["ud_mwe"],
         typ=mwe.typ,
         poses=listify_poses(mwe.poses),
-        headword_idx=mwe.headword_idx
+        headword_idx=mwe.headword_idx,
     )
     for subword_idx, token in enumerate(mwe.tokens):
         insert(
@@ -40,7 +40,7 @@ def insert_mwe(session, mwe: UdMwe, hw_cnts_cache, freqs=False, materialize=Fals
             payload=token.payload,
             payload_is_lemma=token.payload_is_lemma,
             poses=listify_poses(token.poses),
-            feats=token.feats
+            feats=token.feats,
         )
     for link in mwe.links:
         insert(
@@ -98,13 +98,16 @@ def insert_headword_freqs(session, mwe, lemma_query, lemma):
 
 def insert_freqs(session, mwe_id: int, mwe: UdMwe, hw_cnts_cache):
     from .queries import headword_id_query
+
     headword = mwe.headword
     if headword is not None:
         lemma_query = tds_tok(headword)
         headword_id = session.execute(headword_id_query(lemma_query)).fetchall()
         if not headword_id:
             lemma = headword.payload
-            headword_id, hw_cnts = insert_headword_freqs(session, mwe, lemma_query, lemma)
+            headword_id, hw_cnts = insert_headword_freqs(
+                session, mwe, lemma_query, lemma
+            )
             hw_cnts_cache[lemma_query] = hw_cnts
         else:
             hw_cnts = hw_cnts_cache[lemma_query]
@@ -122,15 +125,12 @@ def insert_freqs(session, mwe_id: int, mwe: UdMwe, hw_cnts_cache):
     frame_cnts = turkudepsearch_propbank_freqs(query)
     for prop, cnt in frame_cnts.items():
         insert(
-            session,
-            tables["frame_propbank_freqs"],
-            mwe_id=mwe_id,
-            prop=prop,
-            cnt=cnt,
+            session, tables["frame_propbank_freqs"], mwe_id=mwe_id, prop=prop, cnt=cnt,
         )
 
     if headword is not None:
         from ..enrichment.propbank import Evaluator
+
         propbank_eval = Evaluator(hw_cnts, frame_cnts)
         for prop, surv in propbank_eval.survival_at_thresh(0.8):
             insert(

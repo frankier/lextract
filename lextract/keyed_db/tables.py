@@ -1,4 +1,13 @@
-from sqlalchemy import Column, String, MetaData, Table, ForeignKey, Integer, JSON, Boolean
+from sqlalchemy import (
+    Column,
+    String,
+    MetaData,
+    Table,
+    ForeignKey,
+    Integer,
+    JSON,
+    Boolean,
+)
 
 
 tables = {}
@@ -38,5 +47,6 @@ def create_tables(metadata=None):
 def extend_mweproc():
     from lextract.mweproc.db.confs import setup_embed
     from lextract.mweproc.db.tables import metadata as mweproc_metadata
+
     setup_embed()
     return create_tables(mweproc_metadata)

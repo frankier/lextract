@@ -20,8 +20,9 @@ BATCH_SIZE = 50000
 @click.command()
 @click.option("--embed/--dist")
 @click.option("--skip-freqs/--include-freqs", is_flag=True)
-@click.option("--wl", type=click.Choice(WORDLIST_NAMES), multiple=True,
-              default=WORDLIST_NAMES)
+@click.option(
+    "--wl", type=click.Choice(WORDLIST_NAMES), multiple=True, default=WORDLIST_NAMES
+)
 @click.option("--headwords", type=click.File("r"))
 @mod_data_opt
 @fsts_dir_opt
@@ -61,7 +62,7 @@ def builddb(embed, skip_freqs, wl, headwords):
                     ud_mwe,
                     hw_cnts_cache,
                     freqs=not embed and not skip_freqs,
-                    materialize=not embed
+                    materialize=not embed,
                 )
                 if (idx + 1) % BATCH_SIZE == 0:
                     trans.commit()

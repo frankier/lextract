@@ -2,7 +2,12 @@ import re
 from .common import mk_token_auto, mk_substr_auto
 from .mw_utils import multiword_variants
 from .gen import extract_auto, extract_tokenized
-from lextract.aho_corasick.models import Anchor, UntokenizedTagging, TokenizedTagging, Tagging
+from lextract.aho_corasick.models import (
+    Anchor,
+    UntokenizedTagging,
+    TokenizedTagging,
+    Tagging,
+)
 from lextract.wordnet.cmn import Wordnet as WordnetCmn
 from pyahocorasick import TokenAutomaton
 

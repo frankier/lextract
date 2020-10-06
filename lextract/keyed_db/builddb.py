@@ -89,15 +89,12 @@ def insert_indexed(
             tables["word"],
             key_idx=key_idx,
             key_is_head=key_is_head,
-            ud_mwe_id=ud_mwe_id
+            ud_mwe_id=ud_mwe_id,
         )
     for lemma in key_lemmas:
         if not dry_run:
             insert(
-                session,
-                tables["key_lemma"],
-                key_lemma=lemma,
-                word_id=word_id,
+                session, tables["key_lemma"], key_lemma=lemma, word_id=word_id,
             )
     for subword_idx, constrained_lemmas in enumerate(subword_keys):
         lemma_feats = {k: list(v) for k, v in constrained_lemmas.items()}
@@ -107,7 +104,7 @@ def insert_indexed(
                 tables["subword"],
                 word_id=word_id,
                 subword_idx=subword_idx,
-                lemma_feats=lemma_feats
+                lemma_feats=lemma_feats,
             )
     if key_is_head:
         return IndexingResult.HEAD_INDEXED
@@ -120,7 +117,7 @@ def add_keyed_words(
     mwe_it,
     ignore_bare_lemma: bool = True,
     add_surf: bool = True,
-    dry_run: bool = False
+    dry_run: bool = False,
 ):
     for (ud_mwe_id, ud_mwe_headword_idx), subwords in groupby(mwe_it, itemgetter(0, 1)):
         subwords_list = list((tpl[2:] for tpl in subwords))
@@ -131,7 +128,7 @@ def add_keyed_words(
             ud_mwe_id,
             ignore_bare_lemma=ignore_bare_lemma,
             add_surf=add_surf,
-            dry_run=dry_run
+            dry_run=dry_run,
         )
 
 
@@ -155,7 +152,9 @@ def add_keyed_words_cmd(ignore_bare_lemma: bool, add_surf: bool, dry_run: bool):
         ctx = click.progressbar(inner_it, label="Inserting word keys")
     cnt: Counter = Counter()
     with ctx as outer_it:
-        for indexing_result in add_keyed_words(session, outer_it, ignore_bare_lemma, add_surf, dry_run):
+        for indexing_result in add_keyed_words(
+            session, outer_it, ignore_bare_lemma, add_surf, dry_run
+        ):
             if indexing_result == IndexingResult.HEAD_INDEXED:
                 cnt["headword_idxd"] += 1
             elif indexing_result == IndexingResult.RAREST_INDEXED:

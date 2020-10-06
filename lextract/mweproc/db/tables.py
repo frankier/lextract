@@ -1,4 +1,14 @@
-from sqlalchemy import Column, String, MetaData, Table, ForeignKey, Integer, JSON, Boolean, Float
+from sqlalchemy import (
+    Column,
+    String,
+    MetaData,
+    Table,
+    ForeignKey,
+    Integer,
+    JSON,
+    Boolean,
+    Float,
+)
 from sqlalchemy.types import Enum
 from sqlalchemy.schema import UniqueConstraint
 from lextract.utils.core import run_once
@@ -9,11 +19,7 @@ tables = {}
 
 
 def add_table(name, *cols):
-    tables[name] = Table(
-        name,
-        metadata,
-        *cols,
-    )
+    tables[name] = Table(name, metadata, *cols,)
 
 
 def contribute_to_table(name, *cols):
@@ -77,7 +83,7 @@ def add_freq():
         Column("headword_freq_id", ForeignKey("headword_freq.id"), index=True),
         Column("prop", String, index=True),
         Column("cnt", Integer),
-        UniqueConstraint('headword_freq_id', 'prop', name='headword_prop'),
+        UniqueConstraint("headword_freq_id", "prop", name="headword_prop"),
     )
 
     contribute_to_table(
@@ -97,7 +103,7 @@ def add_freq():
         Column("mwe_id", ForeignKey("ud_mwe.id"), index=True),
         Column("prop", String, index=True),
         Column("cnt", Integer),
-        UniqueConstraint('mwe_id', 'prop', name='mwe_prop_freq_uniq'),
+        UniqueConstraint("mwe_id", "prop", name="mwe_prop_freq_uniq"),
     )
 
     add_table(
@@ -106,7 +112,7 @@ def add_freq():
         Column("mwe_id", ForeignKey("ud_mwe.id"), index=True),
         Column("prop", String, index=True),
         Column("surv", Float),
-        UniqueConstraint('mwe_id', 'prop', name='prop_prop_surv_uniq'),
+        UniqueConstraint("mwe_id", "prop", name="prop_prop_surv_uniq"),
     )
 
 

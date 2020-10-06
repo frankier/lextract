@@ -44,6 +44,7 @@ class Wordnet(ExtractableWordnet):
 def get_lemma_objs(lemma_name, wns=WNS, pos=None):
     from lextract.wordnet import lemmas
     from lextract.wordnet.utils import synset_key_lemmas
+
     wn_lemmas = {}
     for wn in wns:
         for lemma in lemmas(lemma_name, wn, pos=pos):

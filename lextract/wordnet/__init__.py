@@ -15,15 +15,14 @@ def lemmas(lemma_name: str, wn: str, pos: Optional[str] = None) -> List[Lemma]:
 
 def objify_lemmas(wn_to_lemma: Dict[str, List[str]]) -> Dict[str, List[Lemma]]:
     return {
-        wn: [
-            lemma_obj for lemma in lemma_list for lemma_obj in lemmas(lemma, wn)
-        ]
+        wn: [lemma_obj for lemma in lemma_list for lemma_obj in lemmas(lemma, wn)]
         for wn, lemma_list in wn_to_lemma.items()
     }
 
 
 def get_lemma_names(ssof, wns):
     from finntk.wordnet.utils import en2fi_post
+
     wns = list(wns)
     lemmas = []
     if "qf2" in wns:

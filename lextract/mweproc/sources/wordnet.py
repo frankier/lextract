@@ -1,6 +1,10 @@
 from finntk.wordnet import has_abbrv
 from lextract.utils.space import FIN_SPACE
-from lextract.wordnet.fin import Wordnet as FinWordnet, get_lemma_objs, preferred_synset, get_lemma_objs
+from lextract.wordnet.fin import (
+    Wordnet as FinWordnet,
+    get_lemma_objs,
+    preferred_synset,
+)
 from typing import Iterator, ClassVar, Dict, List, Set
 from .common import build_simple_mwe, map_pos_to_ud
 from dataclasses import dataclass
@@ -31,6 +35,7 @@ class WordNetHeadwordLink:
 
 def classify_headword(word: List[str], lemmatise=fi_lemmatise) -> MweType:
     from .common import classify_nonframe_headword
+
     if has_abbrv("_".join(word)):
         return MweType.frame
     else:
@@ -43,7 +48,11 @@ def split_headword(headword: str) -> List[str]:
 
 def get_poses(headword):
     lemma_objs = get_lemma_objs(headword)
-    return {lemma_obj.synset().pos() for lemmas in lemma_objs.values() for _, lemma_obj in lemmas}
+    return {
+        lemma_obj.synset().pos()
+        for lemmas in lemma_objs.values()
+        for _, lemma_obj in lemmas
+    }
 
 
 def guess_headword(ud_mwe: UdMwe):
@@ -83,15 +92,12 @@ def wordnet_wordlist_bare(headwords) -> Iterator[UdMwe]:
             continue
         typ = classify_headword(hw_bits)
         links = [WordNetHeadwordLink(headword)]
-        poses = get_lemma_objs(headword)
+        # TODO: Use POS to try and guess head
+        # poses = get_lemma_objs(headword)
         if typ in (MweType.inflection, MweType.multiword):
             # TODO: inflection should be turned to lemma + features
             # TODO: Can probably used idiomatic-pos note from FiWN
-            yield build_simple_mwe(
-                hw_bits,
-                typ=typ, 
-                links=links
-            )
+            yield build_simple_mwe(hw_bits, typ=typ, links=links)
         elif typ == MweType.frame:
             yield wordnet_frame(hw_bits, typ=typ, links=links)
 
@@ -102,10 +108,7 @@ def wordnet_frame(hw_bits: List[str], **kwargs) -> UdMwe:
         if hw_bit in ALL_ABBRVS:
             mapped_case = PRON_CASE[ALL_ABBRVS[hw_bit]]
             token = UdMweToken(
-                feats={
-                    "Case": mapped_case.title()
-                },
-                poses=map_pos_to_ud("wn", "n", "a")
+                feats={"Case": mapped_case.title()}, poses=map_pos_to_ud("wn", "n", "a")
             )
         else:
             token = UdMweToken(hw_bit)

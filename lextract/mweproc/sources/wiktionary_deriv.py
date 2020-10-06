@@ -21,6 +21,7 @@ class WiktionaryDerivLink:
 
 def wiktionary_deriv_wordlist(session, headwords) -> Iterator[UdMwe]:
     from .wiktionary_defn import flatten, defn_mwes
+
     derivs = session.execute(wiktionary_deriv_query)
     for (word, disp, gloss, extra) in derivs:
         if headwords is not None and word not in headwords:
@@ -40,5 +41,5 @@ def wiktionary_deriv_wordlist(session, headwords) -> Iterator[UdMwe]:
                     # TODO: headword_pos
                     headword_pos=None,
                     typ=MweType.frame,
-                    links=links
+                    links=links,
                 )

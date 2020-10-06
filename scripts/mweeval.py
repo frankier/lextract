@@ -6,7 +6,7 @@ from itertools import groupby
 from heapq import merge
 from bitarray import bitarray, frozenbitarray
 from numpy import array
-from sklearn.metrics import mutual_info_score, normalized_mutual_info_score
+from sklearn.metrics import mutual_info_score
 from scipy.stats import entropy
 
 from lextract.mweproc.db.confs import setup_dist
@@ -16,7 +16,7 @@ from lextract.mweproc.models import MweType
 from lextract.vendor.dep_search import dep_searcher
 
 
-BAD_CHAR_RE = re.compile(r'\.|\-')
+BAD_CHAR_RE = re.compile(r"\.|\-")
 
 
 def parse_hittoken(hittoken):
@@ -64,7 +64,9 @@ def cont_mat(searcher, queries):
     frame_marginal = [0] * frame_idx
     query_marginal = []
     hits = 0
-    for sent_tok_id, group in groupby(merge(*results, key=itemgetter(0)), key=itemgetter(0)):
+    for sent_tok_id, group in groupby(
+        merge(*results, key=itemgetter(0)), key=itemgetter(0)
+    ):
         bitvec = bitarray(len(queries))
         bitvec.setall(0)
         pb_frame = None
@@ -94,13 +96,7 @@ def cont_mat(searcher, queries):
 
 def extract_queries(group):
     queries = set()
-    for (
-        payload,
-        id,
-        typ,
-        query,
-        name,
-    ) in group:
+    for (payload, id, typ, query, name,) in group:
         if BAD_CHAR_RE.search(query) or typ not in (MweType.multiword, MweType.frame):
             continue
         queries.add(query)
@@ -117,7 +113,7 @@ def dump_dist_info(
     query_marginal,
     contingency,
     mi,
-    nmi
+    nmi,
 ):
     print("# " + key)
     print("Hits: " + hits)
@@ -136,13 +132,11 @@ def dump_dist_info(
 
 def proc_results(propbank_db, results, outf=None, frame_counts=None):
     if outf:
-        outf.write("headword,hits,wiki_defns,wiki_queries,wiki_combs,wiki_entropy,frames,frame_entropy,mi,nmi\n")
+        outf.write(
+            "headword,hits,wiki_defns,wiki_queries,wiki_combs,wiki_entropy,frames,frame_entropy,mi,nmi\n"
+        )
         outf.flush()
-    args = objectview(
-        query_dir="/tmp/",
-        case=False,
-        database=propbank_db,
-    )
+    args = objectview(query_dir="/tmp/", case=False, database=propbank_db,)
     with dep_searcher(args) as searcher:
         for key, group in groupby(results, key=itemgetter(0)):
             if frame_counts and frame_counts[key] < 2:
@@ -153,7 +147,14 @@ def proc_results(propbank_db, results, outf=None, frame_counts=None):
             if len(queries) < 2:
                 print("Skipping", key, "due to lack of queries")
                 continue
-            counters, frame_dict, bitvec_dict, frame_marginal, query_marginal, hits = cont_mat(searcher, queries)
+            (
+                counters,
+                frame_dict,
+                bitvec_dict,
+                frame_marginal,
+                query_marginal,
+                hits,
+            ) = cont_mat(searcher, queries)
             if len(counters) < 2:
                 print("Skipping", key, "due to lack of results")
                 continue
@@ -164,18 +165,24 @@ def proc_results(propbank_db, results, outf=None, frame_counts=None):
             nmi = mi / ((query_entropy + frame_entropy) / 2)
             if outf:
                 outf.write(
-                    ",".join((str(x) for x in [
-                        key,
-                        hits,
-                        len(group),
-                        len(queries),
-                        len(bitvec_dict),
-                        query_entropy,
-                        frame_counts[key] if frame_counts else 0,
-                        frame_entropy,
-                        mi,
-                        nmi,
-                    ])) + "\n"
+                    ",".join(
+                        (
+                            str(x)
+                            for x in [
+                                key,
+                                hits,
+                                len(group),
+                                len(queries),
+                                len(bitvec_dict),
+                                query_entropy,
+                                frame_counts[key] if frame_counts else 0,
+                                frame_entropy,
+                                mi,
+                                nmi,
+                            ]
+                        )
+                    )
+                    + "\n"
                 )
                 outf.flush()
             else:
@@ -189,22 +196,24 @@ def proc_results(propbank_db, results, outf=None, frame_counts=None):
                     query_marginal,
                     contingency,
                     mi,
-                    nmi
+                    nmi,
                 )
 
 
 @click.group()
 @click.pass_context
 @click.option("--out", type=click.File("w"))
-@click.option("--typ", type=click.Choice((mwet.name for mwet in MweType)), multiple=True)
+@click.option(
+    "--typ", type=click.Choice((mwet.name for mwet in MweType)), multiple=True
+)
 def mweeval(ctx, out, typ):
     setup_dist()
     ctx.ensure_object(dict)
-    ctx.obj['out'] = out
+    ctx.obj["out"] = out
     if typ:
-        ctx.obj['typ'] = [MweType[t] for t in typ]
+        ctx.obj["typ"] = [MweType[t] for t in typ]
     else:
-        ctx.obj['typ'] = None
+        ctx.obj["typ"] = None
 
 
 @mweeval.command()
@@ -213,7 +222,11 @@ def mweeval(ctx, out, typ):
 @click.argument("headword")
 def single(ctx, propbank_db, headword):
     conn = get_connection()
-    proc_results(propbank_db, conn.execute(headword_grouped((headword,), typ=ctx.obj["typ"])), outf=ctx.obj["out"])
+    proc_results(
+        propbank_db,
+        conn.execute(headword_grouped((headword,), typ=ctx.obj["typ"])),
+        outf=ctx.obj["out"],
+    )
 
 
 @mweeval.command()
@@ -221,9 +234,19 @@ def single(ctx, propbank_db, headword):
 @click.argument("propbank_db")
 @click.argument("propbank_tsv", type=click.File("r"))
 def propbank(ctx, propbank_db, propbank_tsv):
-    headwords = {key: len(list(group)) for key, group in groupby((row[0] for row in csv.reader(propbank_tsv, delimiter="\t")))}
+    headwords = {
+        key: len(list(group))
+        for key, group in groupby(
+            (row[0] for row in csv.reader(propbank_tsv, delimiter="\t"))
+        )
+    }
     conn = get_connection()
-    proc_results(propbank_db, conn.execute(headword_grouped(headwords.keys(), typ=ctx.obj["typ"])), outf=ctx.obj["out"], frame_counts=headwords)
+    proc_results(
+        propbank_db,
+        conn.execute(headword_grouped(headwords.keys(), typ=ctx.obj["typ"])),
+        outf=ctx.obj["out"],
+        frame_counts=headwords,
+    )
 
 
 @mweeval.command()
@@ -231,7 +254,11 @@ def propbank(ctx, propbank_db, propbank_tsv):
 @click.argument("propbank_db")
 def db(ctx, propbank_db):
     conn = get_connection()
-    proc_results(propbank_db, conn.execute(headword_grouped(typ=ctx.obj["typ"])), outf=ctx.obj["out"])
+    proc_results(
+        propbank_db,
+        conn.execute(headword_grouped(typ=ctx.obj["typ"])),
+        outf=ctx.obj["out"],
+    )
 
 
 if __name__ == "__main__":

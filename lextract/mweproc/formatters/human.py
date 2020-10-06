@@ -6,7 +6,11 @@ from ..models import UdMwe, UdMweToken
 from typing import Optional, Set
 
 
-CASE_NORMSEG = {abbrv.title(): FULL_CASE_NORMSEG[full] for abbrv, full in ABBRV_FULL_CASE_MAP.items() if full is not None}
+CASE_NORMSEG = {
+    abbrv.title(): FULL_CASE_NORMSEG[full]
+    for abbrv, full in ABBRV_FULL_CASE_MAP.items()
+    if full is not None
+}
 
 STD_ABBRVS_REV = {pro: abbr for abbr, pro in STD_ABBRVS.items()}
 CASE_ABBRV = {
@@ -44,6 +48,7 @@ DEFAULT_VERB_FEATS = {
 def gen_verb_default_feats(token: UdMweToken) -> Optional[Set[str]]:
     def get_def(feat):
         return token.feats.get(feat, DEFAULT_VERB_FEATS[feat])
+
     if not token.poses or "VERB" not in token.poses:
         return None
     if not token.payload_is_lemma:
@@ -62,8 +67,7 @@ def gen_verb_default_feats(token: UdMweToken) -> Optional[Set[str]]:
 
 
 def gapped_mwe_tok(
-    token: UdMweToken,
-    use_jnk: bool = False,
+    token: UdMweToken, use_jnk: bool = False,
 ):
     if token.payload is not None:
         if token.feats:
@@ -129,11 +133,11 @@ def gapped_mwe_tok(
 
 
 def gapped_mwe(
-        mwe: UdMwe,
-        use_jnk: bool = False,
-        strong_head: bool = False,
-        strong_start: str = "<strong>",
-        strong_end: str = "</strong>"
+    mwe: UdMwe,
+    use_jnk: bool = False,
+    strong_head: bool = False,
+    strong_start: str = "<strong>",
+    strong_end: str = "</strong>",
 ) -> str:
     bits = []
     for idx, token in enumerate(mwe.tokens):
@@ -157,7 +161,9 @@ def pos_template(mwe: UdMwe) -> str:
             gap_type = "w"
         bit = (
             (",".join(token.poses) if token.poses else "u")
-            + "," + gap_type + (",h" if mwe.headword_idx == idx else "")
+            + ","
+            + gap_type
+            + (",h" if mwe.headword_idx == idx else "")
         )
         bits.append(bit)
     return " ".join(bits)

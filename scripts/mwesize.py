@@ -33,48 +33,50 @@ TYP_MAP = {
 
 
 def mk_joined():
-    return tables["ud_mwe"].outerjoin(
-        tables["link"],
-        tables["link"].c.mwe_id == tables["ud_mwe"].c.id,
-    ).outerjoin(
-        tables["wiktionary_hw_link"],
-        tables["wiktionary_hw_link"].c.mwe_id == tables["ud_mwe"].c.id
+    return (
+        tables["ud_mwe"]
+        .outerjoin(tables["link"], tables["link"].c.mwe_id == tables["ud_mwe"].c.id,)
+        .outerjoin(
+            tables["wiktionary_hw_link"],
+            tables["wiktionary_hw_link"].c.mwe_id == tables["ud_mwe"].c.id,
+        )
     )
 
 
 def mwe_typ_group(conn, joined, link_name):
-    return conn.execute(select([
-        tables["ud_mwe"].c.typ,
-        func.count(tables["ud_mwe"].c.id),
-    ]).where(
-        tables["link"].c.name == link_name
-    ).select_from(joined).group_by(
-        tables["ud_mwe"].c.typ
-    ))
+    return conn.execute(
+        select([tables["ud_mwe"].c.typ, func.count(tables["ud_mwe"].c.id)])
+        .where(tables["link"].c.name == link_name)
+        .select_from(joined)
+        .group_by(tables["ud_mwe"].c.typ)
+    )
 
 
 def wiki_hw_group(conn, joined, mwe_typ, grouper):
-    return conn.execute(select([
-        grouper,
-        func.count(tables["ud_mwe"].c.id),
-    ]).where(
-        and_(
-            tables["link"].c.name == "wikihw",
-            tables["ud_mwe"].c.typ == mwe_typ
+    return conn.execute(
+        select([grouper, func.count(tables["ud_mwe"].c.id)])
+        .where(
+            and_(tables["link"].c.name == "wikihw", tables["ud_mwe"].c.typ == mwe_typ)
         )
-    ).select_from(joined).group_by(grouper))
+        .select_from(joined)
+        .group_by(grouper)
+    )
 
 
 def fmt_row(level, title, cnt, parent_cnt=None, noare=False):
     if level == 0:
         first_col = title
     else:
-        first_col = "\\hspace{{{}mm}}\\ldots{{}}of which {}{}".format(5 * level - 2, "" if noare else "are ", title)
+        first_col = "\\hspace{{{}mm}}\\ldots{{}}of which {}{}".format(
+            5 * level - 2, "" if noare else "are ", title
+        )
     print(
         "{} & \\num{{{}}} & {} \\\\".format(
             first_col,
             cnt,
-            "\SI{{{:.1f}}}{{\\percent}}".format(cnt / parent_cnt * 100) if parent_cnt else ""
+            "\\SI{{{:.1f}}}{{\\percent}}".format(cnt / parent_cnt * 100)
+            if parent_cnt
+            else "",
         )
     )
 
@@ -85,16 +87,15 @@ def mwesize():
     setup_dist()
     joined = mk_joined()
     print(BEGIN)
-    total_cnt = conn.execute(select([
-        func.count(tables["ud_mwe"].c.id),
-    ]).select_from(
-        tables["ud_mwe"]
-    )).scalar()
+    total_cnt = conn.execute(
+        select([func.count(tables["ud_mwe"].c.id)]).select_from(tables["ud_mwe"])
+    ).scalar()
     fmt_row(0, "Total multiwords", total_cnt)
-    link_cnts = conn.execute(select([
-        tables["link"].c.name,
-        func.count(tables["ud_mwe"].c.id),
-    ]).select_from(joined).group_by(tables["link"].c.name))
+    link_cnts = conn.execute(
+        select([tables["link"].c.name, func.count(tables["ud_mwe"].c.id)])
+        .select_from(joined)
+        .group_by(tables["link"].c.name)
+    )
     for idx, (link_name, src_cnt) in enumerate(link_cnts):
         print("\\midrule\n")
         fmt_row(1, LINK_NAME_MAP[link_name], src_cnt, total_cnt)
@@ -103,18 +104,34 @@ def mwesize():
                 fmt_row(2, TYP_MAP[mwe_typ], typ_cnt, src_cnt)
                 if link_name == "wikihw":
                     if mwe_typ == MweType.inflection:
-                        for has_sense, cnt in wiki_hw_group(conn, joined, mwe_typ, tables["wiktionary_hw_link"].c.has_senses):
+                        for has_sense, cnt in wiki_hw_group(
+                            conn,
+                            joined,
+                            mwe_typ,
+                            tables["wiktionary_hw_link"].c.has_senses,
+                        ):
                             fmt_row(
                                 3,
-                                "from a page with definitions" if has_sense else "from a page without definitions",
-                                cnt, typ_cnt
+                                "from a page with definitions"
+                                if has_sense
+                                else "from a page without definitions",
+                                cnt,
+                                typ_cnt,
                             )
                     elif mwe_typ == MweType.multiword:
-                        for page_exists, cnt in wiki_hw_group(conn, joined, mwe_typ, tables["wiktionary_hw_link"].c.page_exists):
+                        for page_exists, cnt in wiki_hw_group(
+                            conn,
+                            joined,
+                            mwe_typ,
+                            tables["wiktionary_hw_link"].c.page_exists,
+                        ):
                             fmt_row(
                                 3,
-                                "have a Wiktionary page" if page_exists else "are a redlink",
-                                cnt, typ_cnt
+                                "have a Wiktionary page"
+                                if page_exists
+                                else "are a redlink",
+                                cnt,
+                                typ_cnt,
                             )
     print(END)
 

@@ -15,7 +15,7 @@ def extract_toks_cmd():
     starts = []
     start = 0
     for token in tokenised:
-        start = paragraph.index(token['surf'], start)
+        start = paragraph.index(token["surf"], start)
         starts.append(start)
 
     surfs = [tok["surf"] for tok in tokenised]

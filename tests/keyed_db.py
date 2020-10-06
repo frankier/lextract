@@ -1,5 +1,3 @@
-from typing import List, Optional, Set
-
 from boltons.dictutils import FrozenDict
 from wikiparse.utils.db import get_session
 from sqlalchemy import select, func
@@ -35,17 +33,13 @@ def mk_test_mwe(hw_bits, headword_idx):
         typ = MweType.multiword
     else:
         typ = MweType.inflection
-    mwe = build_simple_mwe(
-        hw_bits,
-        typ=typ,
-        links=[],
-        headword_idx=headword_idx,
-    )
+    mwe = build_simple_mwe(hw_bits, typ=typ, links=[], headword_idx=headword_idx,)
     return mwe
 
 
 def create_db(db_path):
     from lextract.mweproc.db.tables import metadata as mweproc_metadata
+
     session = get_session(db_path)
     engine = session().get_bind().engine
     mweproc_metadata.create_all(engine)
@@ -57,13 +51,7 @@ def create_phrase_test_db(db_path):
     hw_cnts_cache = {}
     for word in TEST_WORDS:
         mwe = mk_test_mwe(word, 0)
-        insert_mwe(
-            session,
-            mwe,
-            hw_cnts_cache,
-            freqs=False,
-            materialize=True
-        )
+        insert_mwe(session, mwe, hw_cnts_cache, freqs=False, materialize=True)
     session.commit()
     mwe_it = session.execute(mwe_for_indexing())
     for indexing_result in add_keyed_words(session, mwe_it, True, True, False):
@@ -74,39 +62,17 @@ def create_phrase_test_db(db_path):
 
 TEST_FRAMES = [
     (
-        'pitää ___-ta ___-na',
+        "pitää ___-ta ___-na",
         0,
-        [
-            ('pitää', {}),
-            (None, {'Case': 'Par'}),
-            (None, {'Case': 'Ess'})
-        ],
+        [("pitää", {}), (None, {"Case": "Par"}), (None, {"Case": "Ess"})],
     ),
     (
-        'pitää ___-sta kiinni',
+        "pitää ___-sta kiinni",
         0,
-        [
-            ('pitää', {}),
-            (None, {'Case': 'Ela'}),
-            ('kiinni', {})
-        ],
+        [("pitää", {}), (None, {"Case": "Ela"}), ("kiinni", {})],
     ),
-    (
-        'pitää ___-sta',
-        0,
-        [
-            ('pitää', {}),
-            (None, {'Case': 'Ela'})
-        ],
-    ),
-    (
-        'kummuta ___-sta',
-        0,
-        [
-            ('kummuta', {}),
-            (None, {'Case': 'Ela'})
-        ],
-    ),
+    ("pitää ___-sta", 0, [("pitää", {}), (None, {"Case": "Ela"})],),
+    ("kummuta ___-sta", 0, [("kummuta", {}), (None, {"Case": "Ela"})],),
 ]
 
 
@@ -116,22 +82,12 @@ def create_frame_test_db(db_path):
     for gapped, headword_idx, subwords in TEST_FRAMES:
         mwe = UdMwe(
             tokens=[
-                UdMweToken(
-                    payload=payload,
-                    feats=feats,
-                )
-                for payload, feats in subwords
+                UdMweToken(payload=payload, feats=feats,) for payload, feats in subwords
             ],
             typ=MweType.frame,
-            headword_idx=headword_idx
+            headword_idx=headword_idx,
         )
-        insert_mwe(
-            session,
-            mwe,
-            hw_cnts_cache,
-            freqs=False,
-            materialize=True
-        )
+        insert_mwe(session, mwe, hw_cnts_cache, freqs=False, materialize=True)
     session.commit()
     mwe_it = session.execute(mwe_for_indexing())
     for indexing_result in add_keyed_words(session, mwe_it, True, True, False):
@@ -152,6 +108,7 @@ def frame_testdb():
 
 def test_insert_worked(phrase_testdb):
     from lextract.keyed_db.tables import tables
+
     word_count = phrase_testdb.execute(
         select([func.count(tables["word"].c.id)])
     ).scalar()
@@ -163,7 +120,9 @@ def assert_token_matches(session, matches, expected_matches):
     gapped_query = mwe_ids_as_gapped_mwes()
     actual_matches = set()
     for matchings, word in matches:
-        gapped_mwe = next(session.execute(gapped_query, params={"ud_mwe_id": word["ud_mwe_id"]}))[0]
+        gapped_mwe = next(
+            session.execute(gapped_query, params={"ud_mwe_id": word["ud_mwe_id"]})
+        )[0]
         actual_matches.add((frozenset(matchings), gapped_mwe))
     assert actual_matches == set(expected_matches)
 
@@ -172,7 +131,9 @@ def assert_dep_matches(session, matches, expected_matches):
     assert len(matches) == len(expected_matches)
     gapped_query = mwe_ids_as_gapped_mwes()
     for matchings, word in matches:
-        gapped_mwe = next(session.execute(gapped_query, params={"ud_mwe_id": word["ud_mwe_id"]}))[0]
+        gapped_mwe = next(
+            session.execute(gapped_query, params={"ud_mwe_id": word["ud_mwe_id"]})
+        )[0]
         assert gapped_mwe in expected_matches
         assert {expected_matches[gapped_mwe]} == matchings
 
@@ -181,7 +142,13 @@ def assert_dep_matches(session, matches, expected_matches):
     "toks,expected_matches",
     [
         (["humaloissa"], [(fs(fd({0: fs(0)})), "humalassa")]),
-        (["älä", "tule", "humalaan"], [(fs(fd({0: fs(1), 1: fs(2)})), "tulla humalaan"), (fs(fd({0: fs(2)})), "humalaan")]),
+        (
+            ["älä", "tule", "humalaan"],
+            [
+                (fs(fd({0: fs(1), 1: fs(2)})), "tulla humalaan"),
+                (fs(fd({0: fs(2)})), "humalaan"),
+            ],
+        ),
         (["tulevasta"], [(fs(fd({0: fs(0)})), "tuleva")]),
     ],
 )
@@ -218,16 +185,19 @@ CONLLS = """
 3	vihansa	viha	NOUN	_	Case=Gen|Number=Sing|Person[psor]=3	4	dobj	_	_
 4	kumpuaa	kummuta	VERB	_	Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin|Voice=Act	0	root	_	_
 5	?	?	PUNCT	_	_	4	punct	_	_
-""".strip().split("\n\n")
-
-
-@pytest.mark.parametrize(
-    "use_conllu_feats", [False, True]
+""".strip().split(
+    "\n\n"
 )
+
+
+@pytest.mark.parametrize("use_conllu_feats", [False, True])
 @pytest.mark.parametrize(
     "conll,expected_matches",
     [
-        (CONLLS[0], {"humalaan": fd({0: fs(2)}), "tulla humalaan": fd({0: fs(1), 1: fs(2)})}),
+        (
+            CONLLS[0],
+            {"humalaan": fd({0: fs(2)}), "tulla humalaan": fd({0: fs(1), 1: fs(2)})},
+        ),
     ],
 )
 def test_dep_matches(phrase_testdb, use_conllu_feats, conll, expected_matches):
@@ -241,26 +211,31 @@ def test_dep_matches(phrase_testdb, use_conllu_feats, conll, expected_matches):
     [
         (
             ["Minä", "pidän", "voileipäkakusta"],
-            [(fs(fd({0: fs(1), 1: fs(2)})), 'pitää ___-sta')]
+            [(fs(fd({0: fs(1), 1: fs(2)})), "pitää ___-sta")],
         ),
         (
             ["Minä", "pidän", "herkullisesta", "voileipäkakusta"],
-            [(fs(fd({0: fs(1), 1: fs(2, 3)}), fd({0: fs(1), 1: fs(2)})), 'pitää ___-sta')]
+            [
+                (
+                    fs(fd({0: fs(1), 1: fs(2, 3)}), fd({0: fs(1), 1: fs(2)})),
+                    "pitää ___-sta",
+                )
+            ],
         ),
         (
             ["Minä", "voin", "pitää", "laukustasi", "kiinni", "."],
             [
-                (fs(fd({0: fs(2), 1: fs(3), 2: fs(4)})), 'pitää ___-sta kiinni'),
-                (fs(fd({0: fs(2), 1: fs(3)})), 'pitää ___-sta')
-            ]
+                (fs(fd({0: fs(2), 1: fs(3), 2: fs(4)})), "pitää ___-sta kiinni"),
+                (fs(fd({0: fs(2), 1: fs(3)})), "pitää ___-sta"),
+            ],
         ),
         (
             ["Minä", "pidän", "ihmisiä", "vihamielisinä"],
-            [(fs(fd({0: fs(1), 1: fs(2), 2: fs(3)})), 'pitää ___-ta ___-na')]
+            [(fs(fd({0: fs(1), 1: fs(2), 2: fs(3)})), "pitää ___-ta ___-na")],
         ),
         (
             ["Minä", "pidän", "siistiä", "ihmisiä", "vihamielisinä"],
-            [(fs(fd({0: fs(1), 1: fs(2, 3), 2: fs(4)})), 'pitää ___-ta ___-na')]
+            [(fs(fd({0: fs(1), 1: fs(2, 3), 2: fs(4)})), "pitää ___-ta ___-na")],
         ),
     ],
 )
@@ -269,36 +244,14 @@ def test_token_frame_matches(frame_testdb, toks, expected_matches):
     assert_token_matches(frame_testdb, matches, expected_matches)
 
 
-@pytest.mark.parametrize(
-    "use_conllu_feats", [False, True]
-)
+@pytest.mark.parametrize("use_conllu_feats", [False, True])
 @pytest.mark.parametrize(
     "conll,expected_matches",
     [
-        (
-            CONLLS[1],
-            {
-                'pitää ___-sta': fd({0: fs(1), 1: fs(2)})
-            }
-        ),
-        (
-            CONLLS[2],
-            {
-                'pitää ___-sta': fd({0: fs(1), 1: fs(2, 3)})
-            }
-        ),
-        (
-            CONLLS[3],
-            {
-                'pitää ___-sta': fd({0: fs(1), 1: fs(3)})
-            }
-        ),
-        (
-            CONLLS[4],
-            {
-                'kummuta ___-sta': fd({0: fs(3), 1: fs(0)})
-            }
-        ),
+        (CONLLS[1], {"pitää ___-sta": fd({0: fs(1), 1: fs(2)})}),
+        (CONLLS[2], {"pitää ___-sta": fd({0: fs(1), 1: fs(2, 3)})}),
+        (CONLLS[3], {"pitää ___-sta": fd({0: fs(1), 1: fs(3)})}),
+        (CONLLS[4], {"kummuta ___-sta": fd({0: fs(3), 1: fs(0)})}),
     ],
 )
 def test_dep_frame_matches(frame_testdb, use_conllu_feats, conll, expected_matches):
@@ -309,21 +262,19 @@ def test_dep_frame_matches(frame_testdb, use_conllu_feats, conll, expected_match
 
 def test_longest_matches():
     from lextract.keyed_db.extract import longest_matches
-    assert longest_matches({fd({0: fs(1), 1: fs(2, 3)}), fd({0: fs(1), 1: fs(2)})}) == {fd({0: fs(1), 1: fs(2, 3)})}
+
+    assert longest_matches({fd({0: fs(1), 1: fs(2, 3)}), fd({0: fs(1), 1: fs(2)})}) == {
+        fd({0: fs(1), 1: fs(2, 3)})
+    }
 
 
 def test_olla_must():
     from common import must_olla_mwe
+
     session = create_db("sqlite://")
     mwes = must_olla_mwe()
     for mwe in mwes:
-        insert_mwe(
-            session,
-            mwe,
-            {},
-            freqs=False,
-            materialize=True
-        )
+        insert_mwe(session, mwe, {}, freqs=False, materialize=True)
     session.commit()
     last_row = list(session.execute(mwe_for_indexing()))[-1]
-    assert last_row[-1] == {'Tense': 'Pres', 'Voice': 'Pass', 'VerbForm': 'Part'}
+    assert last_row[-1] == {"Tense": "Pres", "Voice": "Pass", "VerbForm": "Part"}

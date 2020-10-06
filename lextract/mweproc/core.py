@@ -14,7 +14,13 @@ def tag(lbl, it):
 
 
 def all_wordlists(session, wl, headwords) -> Iterator[UdMwe]:
-    from .sources import wordnet_wordlist, wiktionary_defn_wordlist, wiktionary_hw_wordlist, wiktionary_deriv_wordlist
+    from .sources import (
+        wordnet_wordlist,
+        wiktionary_defn_wordlist,
+        wiktionary_hw_wordlist,
+        wiktionary_deriv_wordlist,
+    )
+
     if "wordnet" in wl:
         yield from tag("wordnet", wordnet_wordlist(headwords))
     if "wiktionary_defn" in wl:
@@ -22,7 +28,9 @@ def all_wordlists(session, wl, headwords) -> Iterator[UdMwe]:
     if "wiktionary_hw" in wl:
         yield from tag("wiktionary_hw", wiktionary_hw_wordlist(session, headwords))
     if "wiktionary_deriv" in wl:
-        yield from tag("wiktionary_deriv", wiktionary_deriv_wordlist(session, headwords))
+        yield from tag(
+            "wiktionary_deriv", wiktionary_deriv_wordlist(session, headwords)
+        )
 
 
 WORDLIST_NAMES = ["wordnet", "wiktionary_defn", "wiktionary_hw", "wiktionary_deriv"]

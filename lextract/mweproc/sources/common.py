@@ -1,5 +1,8 @@
 from typing import Iterable, List, Set
-from finntk.data.wordnet_pos import POS_MAP as WN_TO_WIKI_POS, UD_POS_MAP as WN_TO_UD_MAP
+from finntk.data.wordnet_pos import (
+    POS_MAP as WN_TO_WIKI_POS,
+    UD_POS_MAP as WN_TO_UD_MAP,
+)
 from finntk.data.omorfi_normseg import CASE_NAME_MAP
 from ..models import UdMwe, UdMweToken, MweType
 from ...utils.lemmatise import fi_lemmatise

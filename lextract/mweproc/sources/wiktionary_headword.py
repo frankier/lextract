@@ -30,4 +30,8 @@ def wiktionary_hw_wordlist(session, headwords) -> Iterator[UdMwe]:
         typ = classify_nonframe_headword(word_bits)
         if typ == MweType.lemma:
             continue
-        yield build_simple_mwe(word_bits, typ=typ, links=[WiktionaryHeadwordLink(word, not redlink, has_senses)])
+        yield build_simple_mwe(
+            word_bits,
+            typ=typ,
+            links=[WiktionaryHeadwordLink(word, not redlink, has_senses)],
+        )

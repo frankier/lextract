@@ -1,4 +1,3 @@
-import logging
 from dataclasses import dataclass
 from typing import ClassVar, Dict, List, Iterator, Any
 from wikiparse.assoc import proc_assoc
@@ -38,11 +37,7 @@ def wiktionary_defn_wordlist(session, headwords, lemmatise=fi_lemmatise):
                 continue
             for mwe in flatten(assoc.tree):
                 yield from defn_mwes(
-                    word,
-                    mwe,
-                    headword_pos=pos,
-                    typ=MweType.frame,
-                    links=links
+                    word, mwe, headword_pos=pos, typ=MweType.frame, links=links
                 )
 
 
@@ -68,7 +63,13 @@ def gen_udmwe(feats_vals: Dict[str, List[str]]) -> Iterator[Dict[str, str]]:
     )
 
 
-def defn_mwes(headword: str, assoc_node: AssocNode, headword_is_lemma=True, headword_pos=None, **kwargs) -> Iterator[UdMwe]:
+def defn_mwes(
+    headword: str,
+    assoc_node: AssocNode,
+    headword_is_lemma=True,
+    headword_pos=None,
+    **kwargs
+) -> Iterator[UdMwe]:
     assert isinstance(assoc_node, PlusNode)
     conf_net: List[List[UdMweToken]] = []
     headword_idx = 0
@@ -84,8 +85,16 @@ def defn_mwes(headword: str, assoc_node: AssocNode, headword_is_lemma=True, head
             if ud_case is None:
                 continue
             feats_vals.setdefault("Case", []).append(ud_case.title())
-        pers = assoc_word.inflection_bits["pers"][0] if "pers" in assoc_word.inflection_bits else None
-        personal = assoc_word.inflection_bits["personal"][0] if "personal" in assoc_word.inflection_bits else None
+        pers = (
+            assoc_word.inflection_bits["pers"][0]
+            if "pers" in assoc_word.inflection_bits
+            else None
+        )
+        personal = (
+            assoc_word.inflection_bits["personal"][0]
+            if "personal" in assoc_word.inflection_bits
+            else None
+        )
         if pers is not None or personal == "impersonal":
             if pers is not None:
                 assert pers == "sg3"
@@ -131,10 +140,9 @@ def defn_mwes(headword: str, assoc_node: AssocNode, headword_is_lemma=True, head
                     # TODO: Should this be guaranteed to be done beforehand in wikiparse instead?
                     "poses": (
                         map_pos_to_ud(
-                            "wiki",
-                            *(pos.title() for pos in (assoc_word.pos or []))
-                        ) or
-                        map_pos_to_ud("wiki", headword_pos)
+                            "wiki", *(pos.title() for pos in (assoc_word.pos or []))
+                        )
+                        or map_pos_to_ud("wiki", headword_pos)
                     ),
                     "payload_is_lemma": headword_is_lemma,
                 }
@@ -144,18 +152,14 @@ def defn_mwes(headword: str, assoc_node: AssocNode, headword_is_lemma=True, head
         else:
             # TODO: Log skipping token due to no options
             pass
-        
-        #assoc_word.inflection_bits
-        #assoc_word.word_type
-        #word_type: Optional[WordType] = None
-        #form: Optional[str] = None
-        #pos: Optional[str] = None
-        #inflection_bits: Dict[str, List[str]] = field(default_factory=dict)
-        #gram_role_bits: List[str] = field(default_factory=list)
-        #lex_raw: Dict[str, str] = field(default_factory=dict)
+
+        # assoc_word.inflection_bits
+        # assoc_word.word_type
+        # word_type: Optional[WordType] = None
+        # form: Optional[str] = None
+        # pos: Optional[str] = None
+        # inflection_bits: Dict[str, List[str]] = field(default_factory=dict)
+        # gram_role_bits: List[str] = field(default_factory=list)
+        # lex_raw: Dict[str, str] = field(default_factory=dict)
     for bits in gen_conf_net(iter(conf_net)):
-        yield UdMwe(
-            bits,
-            headword_idx=headword_idx,
-            **kwargs
-        )
+        yield UdMwe(bits, headword_idx=headword_idx, **kwargs)
