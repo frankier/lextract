@@ -35,7 +35,7 @@ wiktionary_defined_headword_query = (
     .select_from(
         headword.outerjoin(word_sense, word_sense.c.headword_id == headword.c.id)
     )
-    .group_by(headword.c.name)
+    .group_by(headword.c.name, headword.c.redlink)
 )
 
 
