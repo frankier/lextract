@@ -23,4 +23,4 @@ def get_connection(db=None):
 
 
 def update(session, table, pk, **kwargs):
-    return session.execute(table.update().where(id=pk).values(**kwargs))
+    return session.execute(table.update().where(table.c.id == pk).values(**kwargs))
