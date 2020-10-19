@@ -12,6 +12,10 @@ Finnish.
 Find multiwords in text using the rarest lemma as a key. Can find contiguous
 multiwords in tokenized text or discontinuous ones from a dependency tree.
 
+### `lextract.mweproc`
+
+Processing pipeline for [FinnMWE](https://github.com/frankier/finnmwe).
+
 ## Documentation
 
 There are only tests and a few docstrings for now.
