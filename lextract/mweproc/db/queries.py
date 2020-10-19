@@ -89,7 +89,7 @@ def joined_mat_query():
                 lambda acc, elm: acc.outerjoin(
                     tables[elm], tables[elm].c.mwe_id == tables["ud_mwe"].c.id
                 ),
-                RELATED_TABLES,
+                (*RELATED_TABLES, "link"),
                 # , "propbank_surv"
                 tables["ud_mwe"],
             ).outerjoin(tables["headword_freq"])
