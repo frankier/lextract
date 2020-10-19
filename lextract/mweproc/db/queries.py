@@ -8,7 +8,7 @@ from .tables import tables
 RELATED_TABLES = [
     "mwe_fmt",
     "defn",
-    "ud_mwe_freq",
+    # "ud_mwe_freq",
     # "link",
 ]
 

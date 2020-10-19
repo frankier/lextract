@@ -2,10 +2,10 @@ import logging
 from ..models import UdMwe
 from ..enrichment.freq import (
     headword_freq,
-    turkudepsearch_freq,
-    turkudepsearch_headword_freq,
-    turkudepsearch_propbank_freqs,
-    turkudepsearch_propbank_headword_freqs,
+    # turkudepsearch_freq,
+    # turkudepsearch_headword_freq,
+    # turkudepsearch_propbank_freqs,
+    # turkudepsearch_propbank_headword_freqs,
 )
 from ..formatters.human import gapped_mwe, pos_template
 from ..formatters.turkudepsearch import tds, tds_tok
@@ -82,18 +82,18 @@ def insert_headword_freqs(session, mwe, lemma_query, lemma):
         lemma=lemma,
         wordfreq=freqs_res[0],
         wordfreq_zipf=freqs_res[1],
-        internet_parsebank_cnt=turkudepsearch_headword_freq(lemma_query),
+        # internet_parsebank_cnt=turkudepsearch_headword_freq(lemma_query),
     )
-    hw_cnts = turkudepsearch_propbank_headword_freqs(lemma_query)
-    for prop, cnt in hw_cnts.items():
-        insert(
-            session,
-            tables["headword_propbank_freqs"],
-            headword_freq_id=headword_freq_id,
-            prop=prop,
-            cnt=cnt,
-        )
-    return headword_freq_id, hw_cnts
+    # hw_cnts = turkudepsearch_propbank_headword_freqs(lemma_query)
+    # for prop, cnt in hw_cnts.items():
+    # insert(
+    # session,
+    # tables["headword_propbank_freqs"],
+    # headword_freq_id=headword_freq_id,
+    # prop=prop,
+    # cnt=cnt,
+    # )
+    return headword_freq_id  # , hw_cnts
 
 
 def insert_freqs(session, mwe_id: int, mwe: UdMwe, hw_cnts_cache):
@@ -102,41 +102,42 @@ def insert_freqs(session, mwe_id: int, mwe: UdMwe, hw_cnts_cache):
     headword = mwe.headword
     if headword is not None:
         lemma_query = tds_tok(headword)
-        headword_id = session.execute(headword_id_query(lemma_query)).fetchall()
-        if not headword_id:
+        headword_freq_id = session.execute(headword_id_query(lemma_query)).scalar()
+        if headword_freq_id is None:
             lemma = headword.payload
-            headword_id, hw_cnts = insert_headword_freqs(
-                session, mwe, lemma_query, lemma
-            )
-            hw_cnts_cache[lemma_query] = hw_cnts
-        else:
-            hw_cnts = hw_cnts_cache[lemma_query]
-        update(session, tables["ud_mwe"], mwe_id, headword_id=headword_id)
+            # , hw_cnts
+            headword_freq_id = insert_headword_freqs(session, mwe, lemma_query, lemma)
+            # hw_cnts_cache[lemma_query] = hw_cnts
+        # else:
+        # hw_cnts = hw_cnts_cache[lemma_query]
+        update(session, tables["ud_mwe"], mwe_id, headword_freq_id=headword_freq_id)
 
-    query = tds(mwe)
+    # query = tds(mwe)
 
-    insert(
-        session,
-        tables["ud_mwe_freq"],
-        mwe_id=mwe_id,
-        internet_parsebank_cnt=turkudepsearch_freq(query),
-    )
+    # insert(
+    #    session,
+    #    tables["ud_mwe_freq"],
+    #    mwe_id=mwe_id,
+    #    internet_parsebank_cnt=turkudepsearch_freq(query),
+    # )
 
-    frame_cnts = turkudepsearch_propbank_freqs(query)
-    for prop, cnt in frame_cnts.items():
-        insert(
-            session, tables["frame_propbank_freqs"], mwe_id=mwe_id, prop=prop, cnt=cnt,
-        )
+    # frame_cnts = turkudepsearch_propbank_freqs(query)
+    # for prop, cnt in frame_cnts.items():
+    #    insert(
+    #        session, tables["frame_propbank_freqs"], mwe_id=mwe_id, prop=prop, cnt=cnt,
+    #    )
 
-    if headword is not None:
-        from ..enrichment.propbank import Evaluator
+    # if headword is not None:
+    #    from ..enrichment.propbank import Evaluator
 
-        propbank_eval = Evaluator(hw_cnts, frame_cnts)
-        for prop, surv in propbank_eval.survival_at_thresh(0.8):
-            insert(
-                session,
-                tables["frame_propbank_surv"],
-                mwe_id=mwe_id,
-                prop=prop,
-                surv=surv,
-            )
+
+#
+#    propbank_eval = Evaluator(hw_cnts, frame_cnts)
+#    for prop, surv in propbank_eval.survival_at_thresh(0.8):
+#        insert(
+#            session,
+#            tables["frame_propbank_surv"],
+#            mwe_id=mwe_id,
+#            prop=prop,
+#            surv=surv,
+#        )

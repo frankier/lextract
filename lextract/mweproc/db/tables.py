@@ -10,7 +10,8 @@ from sqlalchemy import (
     Float,
 )
 from sqlalchemy.types import Enum
-from sqlalchemy.schema import UniqueConstraint
+
+# from sqlalchemy.schema import UniqueConstraint
 from lextract.utils.core import run_once
 from ..models import MweType
 
@@ -74,46 +75,46 @@ def add_freq():
         Column("lemma", String),
         Column("wordfreq", Float),
         Column("wordfreq_zipf", Float),
-        Column("internet_parsebank_cnt", Integer),
+        # Column("internet_parsebank_cnt", Integer),
     )
 
-    add_table(
-        "headword_propbank_freqs",
-        Column("id", Integer, primary_key=True),
-        Column("headword_freq_id", ForeignKey("headword_freq.id"), index=True),
-        Column("prop", String, index=True),
-        Column("cnt", Integer),
-        UniqueConstraint("headword_freq_id", "prop", name="headword_prop"),
-    )
+    # add_table(
+    # "headword_propbank_freqs",
+    # Column("id", Integer, primary_key=True),
+    # Column("headword_freq_id", ForeignKey("headword_freq.id"), index=True),
+    # Column("prop", String, index=True),
+    # Column("cnt", Integer),
+    # UniqueConstraint("headword_freq_id", "prop", name="headword_prop"),
+    # )
 
     contribute_to_table(
         "ud_mwe",
         Column("headword_freq_id", ForeignKey("headword_freq.id"), index=True),
     )
 
-    add_table(
-        "ud_mwe_freq",
-        Column("mwe_id", ForeignKey("ud_mwe.id"), unique=True, index=True),
-        Column("internet_parsebank_cnt", Integer),
-    )
+    # add_table(
+    # "ud_mwe_freq",
+    # Column("mwe_id", ForeignKey("ud_mwe.id"), unique=True, index=True),
+    # Column("internet_parsebank_cnt", Integer),
+    # )
 
-    add_table(
-        "propbank_freqs",
-        Column("id", Integer, primary_key=True),
-        Column("mwe_id", ForeignKey("ud_mwe.id"), index=True),
-        Column("prop", String, index=True),
-        Column("cnt", Integer),
-        UniqueConstraint("mwe_id", "prop", name="mwe_prop_freq_uniq"),
-    )
+    # add_table(
+    # "propbank_freqs",
+    # Column("id", Integer, primary_key=True),
+    # Column("mwe_id", ForeignKey("ud_mwe.id"), index=True),
+    # Column("prop", String, index=True),
+    # Column("cnt", Integer),
+    # UniqueConstraint("mwe_id", "prop", name="mwe_prop_freq_uniq"),
+    # )
 
-    add_table(
-        "propbank_surv",
-        Column("id", Integer, primary_key=True),
-        Column("mwe_id", ForeignKey("ud_mwe.id"), index=True),
-        Column("prop", String, index=True),
-        Column("surv", Float),
-        UniqueConstraint("mwe_id", "prop", name="prop_prop_surv_uniq"),
-    )
+    # add_table(
+    # "propbank_surv",
+    # Column("id", Integer, primary_key=True),
+    # Column("mwe_id", ForeignKey("ud_mwe.id"), index=True),
+    # Column("prop", String, index=True),
+    # Column("surv", Float),
+    # UniqueConstraint("mwe_id", "prop", name="prop_prop_surv_uniq"),
+    # )
 
 
 @run_once
