@@ -32,7 +32,7 @@ test:pytest:
   stage: test
   image: $CI_REGISTRY_IMAGE
   script:
-    - python -m pytest tests/*.py
+    - python -m pytest tests/keyed_db.py tests/mweproc.py
 
 test:flake8:
   stage: test
