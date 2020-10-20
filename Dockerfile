@@ -1,5 +1,7 @@
 FROM registry.gitlab.com/frankier/wikiparse
 
+RUN apt-get update && apt-get install -y libopencc-dev
+
 RUN rm -rf /app && mkdir /app
 
 WORKDIR /app
