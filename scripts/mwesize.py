@@ -72,6 +72,28 @@ def wiki_hw_group(conn, joined, mwe_typ, grouper):
     )
 
 
+def postpositional_case(conn, joined, *ands):
+    return conn.execute(
+        select([func.count(tables["ud_mwe"].c.id)])
+        .where(
+            and_(
+                tables["ud_mwe"].c.typ == MweType.inflection,
+                func.json_extract(tables["ud_mwe_token"].c.feats, "$.Case").isnot(None),
+                func.json_extract(tables["ud_mwe_token"].c.feats, "$.Case") != "Par",
+                func.json_extract(tables["ud_mwe_token"].c.feats, "$.Case") != "Gen",
+                func.json_extract(tables["ud_mwe_token"].c.feats, "$.Case") != "Nom",
+                *ands
+            )
+        )
+        .select_from(
+            joined.outerjoin(
+                tables["ud_mwe_token"],
+                tables["ud_mwe_token"].c.mwe_id == tables["ud_mwe"].c.id,
+            )
+        )
+    ).scalar()
+
+
 def fmt_row(level, title, cnt, parent_cnt=None, noare=False):
     if level == 0:
         first_col = title
@@ -132,6 +154,16 @@ def mwesize(insert):
                                 cnt,
                                 typ_cnt,
                             )
+                            if has_sense:
+                                pospos_case = postpositional_case(
+                                    conn,
+                                    joined,
+                                    tables["ud_mwe"].c.typ == MweType.inflection,
+                                    tables["wiktionary_hw_link"].c.has_senses,
+                                )
+                                fmt_row(
+                                    4, "postpositional case", pospos_case, cnt,
+                                )
                     elif mwe_typ == MweType.multiword:
                         for page_exists, cnt in wiki_hw_group(
                             conn,
@@ -147,6 +179,16 @@ def mwesize(insert):
                                 cnt,
                                 typ_cnt,
                             )
+                elif link_name == "wnhw" and mwe_typ == MweType.inflection:
+                    pospos_case = postpositional_case(
+                        conn,
+                        joined,
+                        tables["link"].c.name == "wnhw",
+                        tables["ud_mwe"].c.typ == MweType.inflection,
+                    )
+                    fmt_row(
+                        3, "postpositional case", pospos_case, typ_cnt,
+                    )
     if insert:
         insert_metadata(
             conn, {"mweproc_" + k: v for k, v in cnts.items()}, table=tables["meta"]
