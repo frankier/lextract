@@ -13,6 +13,9 @@ from ..sources.wiktionary_headword import WiktionaryHeadwordLink
 from ...utils.db import update
 from .tables import tables
 from wikiparse.utils.db import insert_get_id, insert
+from wikiparse.cmd.parse import add_rev
+from wikiparse.db.insert import insert_metadata
+from wikiparse.db.tables import meta
 
 logger = logging.getLogger(__name__)
 
@@ -141,3 +144,14 @@ def insert_freqs(session, mwe_id: int, mwe: UdMwe, hw_cnts_cache):
 #            prop=prop,
 #            surv=surv,
 #        )
+
+
+def insert_meta(wikiparse_conn, finnmwe_conn):
+    from .queries import meta_query
+
+    meta_dict = {}
+    meta_results = wikiparse_conn.execute(meta_query).fetchall()
+    for row in meta_results:
+        meta_dict["wikiparse_" + row[meta.c.key]] = row[meta.c.value]
+    add_rev(meta_dict, key="mweproc_rev")
+    insert_metadata(finnmwe_conn, meta_dict, table=tables["meta"])

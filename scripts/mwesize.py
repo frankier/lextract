@@ -5,6 +5,7 @@ from lextract.mweproc.models import MweType
 from lextract.utils.db import get_connection
 from lextract.mweproc.db.confs import setup_dist
 from lextract.mweproc.db.tables import tables
+from wikiparse.db.insert import insert_metadata
 
 
 BEGIN = """
@@ -82,21 +83,25 @@ def fmt_row(level, title, cnt, parent_cnt=None, noare=False):
 
 
 @click.command()
-def mwesize():
+@click.option("--insert/--no-insert")
+def mwesize(insert):
     conn = get_connection()
     setup_dist()
     joined = mk_joined()
     print(BEGIN)
+    cnts = {}
     total_cnt = conn.execute(
         select([func.count(tables["ud_mwe"].c.id)]).select_from(tables["ud_mwe"])
     ).scalar()
     fmt_row(0, "Total multiwords", total_cnt)
+    cnts["total"] = total_cnt
     link_cnts = conn.execute(
         select([tables["link"].c.name, func.count(tables["ud_mwe"].c.id)])
         .select_from(joined)
         .group_by(tables["link"].c.name)
     )
     for idx, (link_name, src_cnt) in enumerate(link_cnts):
+        cnts[link_name] = src_cnt
         print("\\midrule\n")
         fmt_row(1, LINK_NAME_MAP[link_name], src_cnt, total_cnt)
         if link_name != "wikidefn":
@@ -133,6 +138,10 @@ def mwesize():
                                 cnt,
                                 typ_cnt,
                             )
+    if insert:
+        insert_metadata(
+            conn, {"mweproc_" + k: v for k, v in cnts.items()}, table=tables["meta"]
+        )
     print(END)
 
 

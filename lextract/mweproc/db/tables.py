@@ -67,6 +67,16 @@ def add_base():
 
 
 @run_once
+def add_meta():
+    add_table(
+        "meta",
+        Column("id", Integer, primary_key=True),
+        Column("key", String, unique=True, nullable=False),
+        Column("value", String, nullable=False),
+    )
+
+
+@run_once
 def add_freq():
     add_table(
         "headword_freq",

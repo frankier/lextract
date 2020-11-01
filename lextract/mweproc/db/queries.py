@@ -1,7 +1,7 @@
 from sqlalchemy import select, func, case
 from functools import reduce
 
-from wikiparse.db.tables import headword, word_sense, derived_term
+from wikiparse.db.tables import headword, word_sense, derived_term, meta
 from .tables import tables
 
 
@@ -53,6 +53,9 @@ wiktionary_deriv_query = (
     )
     .where(derived_term.c.derived_id.is_(None))
 )
+
+
+meta_query = select([meta.c.key, meta.c.value]).select_from(meta)
 
 
 def headword_id_query(lemma_query):

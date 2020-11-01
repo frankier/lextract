@@ -1,4 +1,4 @@
-from .tables import add_base, add_mat, add_freq
+from .tables import add_base, add_mat, add_freq, add_meta
 from .views import add_view
 
 
@@ -10,6 +10,7 @@ def setup_dist():
     add_freq()
     add_mat()
     add_view()
+    add_meta()
 
 
 def setup_embed():

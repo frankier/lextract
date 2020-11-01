@@ -7,7 +7,7 @@ import os
 from .core import all_wordlists, WORDLIST_NAMES
 from .db.confs import setup_dist, setup_embed
 from .db.tables import metadata
-from .db.muts import insert_mwe
+from .db.muts import insert_mwe, insert_meta
 from ..utils.db import get_connection
 from wikiparse.cmd.parse import mod_data_opt, fsts_dir_opt, parse_filterfile
 
@@ -73,5 +73,8 @@ def builddb(embed, skip_freqs, wl, headwords):
         else:
             trans.commit()
     if not embed:
+        trans = conn.begin()
+        insert_meta(wikiparse_conn, conn)
+        trans.commit()
         conn.execute("PRAGMA optimize;")
         conn.execute("VACUUM;")
