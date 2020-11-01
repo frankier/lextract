@@ -9,6 +9,7 @@ cnf("WORK", "work")
 cnf("EVALWORK", WORK + "/eval")
 cnf("EVALDB", EVALWORK + "/mwedbwikiframe.db")
 cnf("EVALF", EVALWORK + "/eval.txt")
+cnf("SIZEF", EVALWORK + "/size.txt")
 
 
 # Input
@@ -43,3 +44,13 @@ rule eval:
     shell:
         "DATABASE_URL=sqlite:///{input.db}" +
         " python scripts/mweeval.py " + PROPBANKDB + " > {output.eval}"
+
+
+rule size:
+    input:
+        db = EVALDB
+    output:
+        size = SIZEF
+    shell:
+        "DATABASE_URL=sqlite:///{input.db}" +
+        " python scripts/mwesize.py --insert > {output.size}"
