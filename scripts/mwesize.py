@@ -53,6 +53,14 @@ def mwe_typ_group(conn, joined, link_name):
     )
 
 
+def have_head_cnt(conn, joined, link_name):
+    return conn.execute(
+        select([func.count(tables["ud_mwe"].c.headword_idx)])
+        .where(tables["link"].c.name == link_name)
+        .select_from(joined)
+    ).scalar()
+
+
 def wiki_hw_group(conn, joined, mwe_typ, grouper):
     return conn.execute(
         select([grouper, func.count(tables["ud_mwe"].c.id)])
@@ -104,6 +112,7 @@ def mwesize(insert):
         cnts[link_name] = src_cnt
         print("\\midrule\n")
         fmt_row(1, LINK_NAME_MAP[link_name], src_cnt, total_cnt)
+        fmt_row(2, "have head", have_head_cnt(conn, joined, link_name), src_cnt)
         if link_name != "wikidefn":
             for mwe_typ, typ_cnt in mwe_typ_group(conn, joined, link_name):
                 fmt_row(2, TYP_MAP[mwe_typ], typ_cnt, src_cnt)
