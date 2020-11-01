@@ -64,6 +64,7 @@ def build_inflections(word: str, lemmatise=fi_lemmatise, **kwargs) -> Iterator[U
                         lemma, payload_is_lemma=True, poses=poses, feats=dict(feats)
                     )
                 ],
+                headword_idx=0,
                 **kwargs
             )
 
