@@ -16,7 +16,7 @@ finntk = ">=0.0.72"
 conllu = "^1.1"
 click_log = "^0.3.2"
 sqlalchemy_utils = "^0.36.5"
-wikiparse = { git = "https://github.com/frankier/wikiparse.git", rev = "2044af22256529c0b2bc7d173ac196a0b947d1ce" }
+wikiparse = { git = "https://github.com/frankier/wikiparse.git", rev = "68c7d648427d2699bdadaa2acb75ee2bf9158c0e" }
 numpy = "^1.19.2"
 scikit-learn = "^0.23.2"
 bitarray = "^1.5.3"
