@@ -31,7 +31,6 @@ rule mkmwedb:
         " && WIKIPARSE_URL=sqlite:///{input.indb}" +
         " DATABASE_URL=sqlite:///{output.outdb}" +
         " python scripts/mkmwedb.py" +
-        " --skip-freqs" +
         " --fsts-dir {input.fsts_dir}" +
         " > " + EVALWORK + "/mwedbwikiframe.log"
 
