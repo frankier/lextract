@@ -20,23 +20,36 @@ wiktionary_gram_query = (
 )
 
 
-wiktionary_defined_headword_query = (
-    select(
-        [
-            headword.c.name,
-            headword.c.redlink,
-            case(
-                value=func.sum(case(value=word_sense.c.sense, whens={"": 0}, else_=1)),
-                whens={0: False},
-                else_=True,
-            ).label("has_senses"),
-        ]
+def json_agg(dialect):
+    if dialect.name == "sqlite":
+        return func.json_group_array
+    elif dialect.name == "postgresql":
+        return func.json_agg
+    else:
+        assert False
+
+
+def wiktionary_defined_headword_query(dialect):
+    return (
+        select(
+            [
+                headword.c.name,
+                headword.c.redlink,
+                json_agg(dialect)(word_sense.c.pos),
+                case(
+                    value=func.sum(
+                        case(value=word_sense.c.sense, whens={"": 0}, else_=1)
+                    ),
+                    whens={0: False},
+                    else_=True,
+                ).label("has_senses"),
+            ]
+        )
+        .select_from(
+            headword.outerjoin(word_sense, word_sense.c.headword_id == headword.c.id)
+        )
+        .group_by(headword.c.name, headword.c.redlink)
     )
-    .select_from(
-        headword.outerjoin(word_sense, word_sense.c.headword_id == headword.c.id)
-    )
-    .group_by(headword.c.name, headword.c.redlink)
-)
 
 
 wiktionary_deriv_query = (

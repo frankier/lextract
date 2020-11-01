@@ -12,7 +12,7 @@ click = ">=6.7"
 plumbum = "^1.6.6"
 pyahocorasick = { git = "https://github.com/frankier/pyahocorasick.git", branch = "stiff-2018-09-20-3", optional = true }
 opencc = "^0.2"
-finntk = ">=0.0.72"
+finntk = ">=0.0.73"
 conllu = "^1.1"
 click_log = "^0.3.2"
 sqlalchemy_utils = "^0.36.5"
@@ -20,6 +20,7 @@ wikiparse = { git = "https://github.com/frankier/wikiparse.git", rev = "68c7d648
 numpy = "^1.19.2"
 scikit-learn = "^0.23.2"
 bitarray = "^1.5.3"
+orjson = "^3.4.3"
 
 [tool.poetry.extras]
 auto = ["pyahocorasick"]

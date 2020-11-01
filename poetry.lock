@@ -222,7 +222,7 @@ python-versions = "*"
 
 [[package]]
 name = "finntk"
-version = "0.0.72"
+version = "0.0.73"
 description = "Finnish NLP toolkit"
 category = "main"
 optional = false
@@ -1220,7 +1220,7 @@ auto = ["pyahocorasick"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "bb9ff8891904e95d8edd1ccd86d8fbcdee1b7ccd9e7439b2d4da210939e9581f"
+content-hash = "9c796f3576e76331b7202cc7612be43bfaa6b42b8e66b3c3e9e4933b6ac78aca"
 
 [metadata.files]
 amply = [
@@ -1337,8 +1337,8 @@ filelock = [
     {file = "filelock-3.0.12.tar.gz", hash = "sha256:18d82244ee114f543149c66a6e0c14e9c4f8a1044b5cdaadd0f82159d6a6ff59"},
 ]
 finntk = [
-    {file = "finntk-0.0.72-py3-none-any.whl", hash = "sha256:18f40e83f1089ff14443db79df116db4881f4ca635694497ad02c380043b1cbf"},
-    {file = "finntk-0.0.72.tar.gz", hash = "sha256:665bc296f141ece218ca71cc873ace69569bf2ecb4f8feb5a35d85950e5249f5"},
+    {file = "finntk-0.0.73-py3-none-any.whl", hash = "sha256:9ac016375db3711cd6cc8d01017ff26312146bc97f4925c7b36076904d8259a7"},
+    {file = "finntk-0.0.73.tar.gz", hash = "sha256:58ade62b4e428b97d8e8d1e2a9ba57b330b67173088bb1c2cf86da36f6f514fe"},
 ]
 flake8 = [
     {file = "flake8-3.8.4-py2.py3-none-any.whl", hash = "sha256:749dbbd6bfd0cf1318af27bf97a14e28e5ff548ef8e5b1566ccfb25a11e7c839"},

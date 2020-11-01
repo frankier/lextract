@@ -6,7 +6,7 @@ from lextract.wordnet.fin import (
     preferred_synset,
 )
 from typing import Iterator, ClassVar, Dict, List, Set
-from .common import build_simple_mwe, map_pos_to_ud
+from .common import build_mwe_or_inflections, map_pos_to_ud, guess_headword
 from dataclasses import dataclass
 from ...utils.lemmatise import fi_lemmatise
 from finntk.data.wordnet import ALL_ABBRVS, PRON_CASE
@@ -55,51 +55,42 @@ def get_poses(headword):
     }
 
 
-def guess_headword(ud_mwe: UdMwe):
-    candidate_idxs = []
-    link = ud_mwe.links[0]
-    assert isinstance(link, WordNetHeadwordLink)
-    mwe = link.headword
-    mwe_poses = get_poses(mwe)
-    for token_idx, token in enumerate(ud_mwe.tokens):
-        if token.payload is None:
-            continue
-        token_poses = get_poses(token.payload)
-        # We just put poses on tokens here for now -- maybe it should go somewhere else really
-        if token_poses:
-            token.poses = map_pos_to_ud("wn", *token_poses)
-        intersection = token_poses.intersection(mwe_poses)
-        if len(intersection):
-            candidate_idxs.append(token_idx)
-    ud_mwe.poses = map_pos_to_ud("wn", *mwe_poses)
-    if len(candidate_idxs) == 1:
-        ud_mwe.headword_idx = candidate_idxs[0]
-    else:
-        # TODO: Note down why it failed
-        pass
-    return ud_mwe
+def wordnet_wordlist(included_headwords) -> Iterator[UdMwe]:
+    return map(guess_headword, wordnet_wordlist_bare(included_headwords))
 
 
-def wordnet_wordlist(headwords) -> Iterator[UdMwe]:
-    return map(guess_headword, wordnet_wordlist_bare(headwords))
+def pos_tag_token(token):
+    if token.payload is None:
+        return
+    token_poses = get_poses(token.payload)
+    if token_poses:
+        token.poses = map_pos_to_ud("wn", *token_poses)
 
 
-def wordnet_wordlist_bare(headwords) -> Iterator[UdMwe]:
+def wordnet_wordlist_bare(included_headwords) -> Iterator[UdMwe]:
     for headword in FinWordnet.lemma_names().keys():
+        mwe_poses = get_poses(headword)
+        ud_poses = map_pos_to_ud("wn", *mwe_poses)
         hw_bits = split_headword(headword)
         headword_space = " ".join(hw_bits)
-        if headwords is not None and headword_space not in headwords:
+        if included_headwords is not None and headword_space not in included_headwords:
             continue
         typ = classify_headword(hw_bits)
         links = [WordNetHeadwordLink(headword)]
-        # TODO: Use POS to try and guess head
-        # poses = get_lemma_objs(headword)
         if typ in (MweType.inflection, MweType.multiword):
-            # TODO: inflection should be turned to lemma + features
-            # TODO: Can probably used idiomatic-pos note from FiWN
-            yield build_simple_mwe(hw_bits, typ=typ, links=links)
+            # TODO: Might be able to improve inflection handling with
+            # idiomatic-pos note from FiWN
+            yield from build_mwe_or_inflections(
+                hw_bits,
+                typ=typ,
+                links=links,
+                poses=ud_poses,
+                token_callback=pos_tag_token,
+            )
         elif typ == MweType.frame:
-            yield wordnet_frame(hw_bits, typ=typ, links=links)
+            yield wordnet_frame(hw_bits, typ=typ, links=links, poses=ud_poses)
+        else:
+            assert typ == MweType.lemma
 
 
 def wordnet_frame(hw_bits: List[str], **kwargs) -> UdMwe:
@@ -112,5 +103,6 @@ def wordnet_frame(hw_bits: List[str], **kwargs) -> UdMwe:
             )
         else:
             token = UdMweToken(hw_bit)
+            pos_tag_token(token)
         tokens.append(token)
     return UdMwe(tokens, **kwargs)
