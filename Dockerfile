@@ -10,3 +10,5 @@ COPY pyproject.toml pyproject.toml
 COPY poetry.lock poetry.lock
 
 RUN ~/.poetry/bin/poetry install
+
+RUN python -c "from nltk import download as d; d('wordnet'); d('omw'); d('punkt')"
