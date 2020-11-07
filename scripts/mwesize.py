@@ -202,8 +202,8 @@ def mwesize(insert):
                         3, "postpositional case", pospos_case, typ_cnt,
                     )
     print("\\midrule\n")
-    fmt_row(1, "syntactic frames", src_cnt, total_cnt)
-    fmt_row(2, "with more than one token", src_cnt, total_cnt)
+    # fmt_row(1, "syntactic frames", src_cnt, total_cnt)
+    # fmt_row(2, "with more than one token", src_cnt, total_cnt)
     if insert:
         insert_metadata(
             conn, {"mweproc_" + k: v for k, v in cnts.items()}, table=tables["meta"]
