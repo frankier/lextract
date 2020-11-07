@@ -44,6 +44,13 @@ def mk_joined():
     )
 
 
+def joined_token(joined):
+    return joined.outerjoin(
+        tables["ud_mwe_token"],
+        tables["ud_mwe_token"].c.mwe_id == tables["ud_mwe"].c.id,
+    )
+
+
 def mwe_typ_group(conn, joined, link_name):
     return conn.execute(
         select([tables["ud_mwe"].c.typ, func.count(tables["ud_mwe"].c.id)])
@@ -85,12 +92,17 @@ def postpositional_case(conn, joined, *ands):
                 *ands
             )
         )
-        .select_from(
-            joined.outerjoin(
-                tables["ud_mwe_token"],
-                tables["ud_mwe_token"].c.mwe_id == tables["ud_mwe"].c.id,
-            )
-        )
+        .select_from(joined_token(joined))
+    ).scalar()
+
+
+def syntactic_frames(conn, joined, min_tokens=1):
+    return conn.execute(
+        select([func.count(tables["ud_mwe"].c.headword_idx)])
+        .where(tables["ud_mwe"].c.typ == MweType.frame,)
+        .group_by(tables["ud_mwe"].c.id)
+        .having(func.count(tables["ud_mwe_token"].c.id) > 1)
+        .select_from(joined_token(joined))
     ).scalar()
 
 
@@ -189,6 +201,9 @@ def mwesize(insert):
                     fmt_row(
                         3, "postpositional case", pospos_case, typ_cnt,
                     )
+    print("\\midrule\n")
+    fmt_row(1, "syntactic frames", src_cnt, total_cnt)
+    fmt_row(2, "with more than one token", src_cnt, total_cnt)
     if insert:
         insert_metadata(
             conn, {"mweproc_" + k: v for k, v in cnts.items()}, table=tables["meta"]
