@@ -26,7 +26,7 @@ test:typecheck:
   stage: test
   image: $CI_REGISTRY_IMAGE
   script:
-    - mypy lextract parse.py
+    - mypy lextract scripts
 
 test:pytest:
   stage: test
