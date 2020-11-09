@@ -123,6 +123,7 @@ def headword_grouped(headwords=None, typ=None):
                 tables["ud_mwe"].c.id,
                 tables["ud_mwe"].c.typ,
                 tables["mwe_fmt"].c.turkudepsearch,
+                tables["mwe_fmt"].c.gapped_mwe,
                 tables["link"].c.name,
             ]
         )

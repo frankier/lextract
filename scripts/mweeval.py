@@ -8,6 +8,9 @@ from bitarray import bitarray, frozenbitarray
 from numpy import array
 from sklearn.metrics import mutual_info_score
 from scipy.stats import entropy
+import seaborn as sns
+import pandas as pd
+from matplotlib import pyplot as plt
 
 from lextract.mweproc.db.confs import setup_dist
 from lextract.mweproc.db.queries import headword_grouped
@@ -23,11 +26,13 @@ def parse_hittoken(hittoken):
     hit_bits = hittoken.split()
     tok_idx = hit_bits[0]
     pb_part = hit_bits[-1]
-    if pb_part == "_":
-        pb_frame = "_"
-    else:
-        pb_frame = pb_part.split("=")[1].split("|")[0]
-    return tok_idx, pb_frame
+    pb_frame = "_"
+    if pb_part != "_":
+        for bit in pb_part.split("|"):
+            k, v = bit.split("=", 1)
+            if k == "PBSENSE":
+                pb_frame = v
+    return tok_idx, pb_frame, hit_bits[3] == "VERB"
 
 
 class objectview(object):
@@ -49,7 +54,9 @@ def cont_mat(searcher, queries):
     for sid, group in groupby(searcher.multi_query(queries), itemgetter(0)):
         col = []
         for _, idx, hittoken in group:
-            tok_idx, pb_frame = parse_hittoken(hittoken)
+            tok_idx, pb_frame, is_verb = parse_hittoken(hittoken)
+            if not is_verb:
+                continue
             col.append(((idx, tok_idx), sid, pb_frame))
             if pb_frame not in frame_dict:
                 frame_dict[pb_frame] = frame_idx
@@ -95,11 +102,11 @@ def cont_mat(searcher, queries):
 
 
 def extract_queries(group):
-    queries = set()
-    for (payload, id, typ, query, name,) in group:
+    queries = []
+    for (payload, id, typ, query, gapped, name,) in group:
         if BAD_CHAR_RE.search(query) or typ not in (MweType.multiword, MweType.frame):
             continue
-        queries.add(query)
+        queries.append(query)
     return queries
 
 
@@ -116,7 +123,7 @@ def dump_dist_info(
     nmi,
 ):
     print("# " + key)
-    print("Hits: " + hits)
+    print("Hits: " + str(hits))
     print("\n".join(frame_dict.keys()))
     print("Frame marginal:", frame_marginal)
     print("  Entropy:", entropy(frame_marginal))
@@ -227,6 +234,99 @@ def single(ctx, propbank_db, headword):
         conn.execute(headword_grouped((headword,), typ=ctx.obj["typ"])),
         outf=ctx.obj["out"],
     )
+
+
+def bitvecs_to_labels(bitvecs, gapped_mwes, headword=None, tidle="~"):
+    print("gapped_mwes", gapped_mwes)
+    for bitvec in bitvecs:
+        bitvec = bitarray(bitvec)
+        print("bitvec", bitvec)
+        bitvec_mwes = []
+        while 1:
+            try:
+                idx = bitvec.index(True)
+            except ValueError:
+                break
+            bitvec[idx] = False
+            print(idx)
+            mwe = gapped_mwes[idx]
+            if headword:
+                mwe = mwe.replace(headword, tidle)
+            mwe = mwe.replace("___-", "__-")
+            if mwe in bitvec_mwes:
+                continue
+            bitvec_mwes.append(mwe)
+        if len(bitvec_mwes) > 1 and headword is not None and tidle in bitvec_mwes:
+            bitvec_mwes.remove(tidle)
+        # XXX TODO: Add some general notion of syntactic inclusion
+        if (
+            headword == "pitää"
+            and len([x for x in bitvec_mwes if "__-sta" in x]) > 1
+            and tidle + " __-sta" in bitvec_mwes
+        ):
+            bitvec_mwes.remove(tidle + " __-sta")
+        if headword == "pitää" and tidle + " __-ta __-na" in bitvec_mwes:
+            if tidle + " __-ta" in bitvec_mwes:
+                bitvec_mwes.remove(tidle + " __-ta")
+            if tidle + " __-na" in bitvec_mwes:
+                bitvec_mwes.remove(tidle + " __-na")
+        # XXX: TODO: Should have option to hide (redundant) accusative)
+        if headword == "pitää" and tidle + " __-ut" in bitvec_mwes:
+            bitvec_mwes.remove(tidle + " __-ut")
+        # yield ",\n".join([", ".join(tpl) for tpl in chunked(bitvec_mwes, 2)])
+        yield ", ".join(bitvec_mwes)
+
+
+@mweeval.command()
+@click.pass_context
+@click.argument("propbank_db")
+@click.argument("headword")
+@click.argument("figout", type=click.Path(), required=False)
+def confmat(ctx, propbank_db, headword, figout):
+    conn = get_connection()
+    group = conn.execute(headword_grouped((headword,), typ=ctx.obj["typ"]))
+    group = list(group)
+    gapped_mwes = [tpl[4] for tpl in group]
+    print("gapped_mwes", gapped_mwes)
+    args = objectview(query_dir="/tmp/", case=False, database=propbank_db,)
+    with dep_searcher(args) as searcher:
+        queries = extract_queries(group)
+        (
+            counters,
+            frame_dict,
+            bitvec_dict,
+            frame_marginal,
+            query_marginal,
+            hits,
+        ) = cont_mat(searcher, queries)
+        contingency = array(counters)
+        print("contingency", contingency)
+        # XXX: Here
+        df = pd.DataFrame(contingency)
+        df.columns = list(frame_dict.keys())
+        print("gapped_mwes", gapped_mwes)
+        bitvec_labels = list(
+            bitvecs_to_labels(
+                bitvec_dict.keys(),
+                gapped_mwes,
+                headword,
+                "\\~{}" if figout and figout.endswith(".pgf") else "~",
+            )
+        )
+        print("bitvec_labels", bitvec_labels)
+        df.index = bitvec_labels
+        print(df)
+        if figout:
+            plt.figure(figsize=(5, 3.4))
+        sns.set(font_scale=0.5)
+        sns.heatmap(df, annot=True, fmt="d", cmap="YlGnBu")
+        plt.xticks(rotation=90)
+        plt.yticks(rotation=0, ha="right")
+        if figout:
+            plt.tight_layout()
+            plt.savefig(figout)
+        else:
+            plt.show()
 
 
 @mweeval.command()

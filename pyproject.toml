@@ -17,13 +17,16 @@ conllu = "^1.1"
 click_log = "^0.3.2"
 sqlalchemy_utils = "^0.36.5"
 wikiparse = { git = "https://github.com/frankier/wikiparse.git", rev = "68c7d648427d2699bdadaa2acb75ee2bf9158c0e" }
-numpy = "^1.19.2"
-scikit-learn = "^0.23.2"
-bitarray = "^1.5.3"
+numpy = { version = "^1.19.2", optional = true}
+scikit-learn = { version = "^0.23.2", optional = true }
+bitarray = { version = "^1.5.3", optional = true }
 orjson = "^3.4.3"
+seaborn = { version = "^0.11.0", optional = true }
+pandas = { version = "^1.1.4", optional = true }
 
 [tool.poetry.extras]
 auto = ["pyahocorasick"]
+eval = ["scikit-learn", "bitarray", "numpy", "seaborn", "pandas"]
 
 [tool.poetry.dev-dependencies]
 flake8 = "^3.5.0"
