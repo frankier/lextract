@@ -167,14 +167,12 @@ def extract_toks_indexed(
         if not right_matches:
             continue
         key_matching = FrozenDict(((word["key_idx"], frozenset((lemma_idx,))),))
-        yield (
-            {
-                FrozenDict({**left_matching, **key_matching, **right_matching})
-                for left_matching in left_matches
-                for right_matching in right_matches
-            },
-            word,
-        )
+        all_matches = {
+            FrozenDict({**left_matching, **key_matching, **right_matching})
+            for left_matching in left_matches
+            for right_matching in right_matches
+        }
+        yield all_matches, word
 
 
 def select_tok_step(
