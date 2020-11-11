@@ -172,3 +172,15 @@ def mwe_for_indexing():
         )
         .order_by(tables["ud_mwe"].c.id, tables["ud_mwe_token"].c.subword_idx)
     )
+
+
+def mwes_for_asafi(mwe_ids):
+    return (
+        select([tables["ud_mwe"].c.id, tables["mwe_fmt"].c.gapped_mwe])
+        .select_from(
+            tables["ud_mwe"].join(
+                tables["mwe_fmt"], tables["mwe_fmt"].c.mwe_id == tables["ud_mwe"].c.id
+            )
+        )
+        .where(tables["ud_mwe"].c.id.in_(mwe_ids))
+    )
