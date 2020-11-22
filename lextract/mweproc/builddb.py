@@ -62,7 +62,7 @@ def builddb(embed, skip_freqs, wl, headwords):
                     ud_mwe,
                     hw_cnts_cache,
                     freqs=not embed and not skip_freqs,
-                    materialize=not embed,
+                    materialize=True,
                 )
                 if (idx + 1) % BATCH_SIZE == 0:
                     trans.commit()
