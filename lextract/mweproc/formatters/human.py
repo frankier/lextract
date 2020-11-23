@@ -3,7 +3,7 @@ from finntk.data.omorfi_normseg import CASE_NAME_MAP as ABBRV_FULL_CASE_MAP
 from finntk.data.wordnet import STD_ABBRVS, PRON_CASE, PRON_LEMMAS
 from finntk.omor.anlys import generate_dict, ud_to_omor
 from ..models import UdMwe, UdMweToken
-from typing import Optional, Set
+from typing import Dict, Optional, Set, List
 
 
 CASE_NORMSEG = {
@@ -23,16 +23,19 @@ CASE_ABBRV = {
 def gap_case(full_case_name):
     if full_case_name in CASE_NORMSEG:
         mapped_normseg = CASE_NORMSEG[full_case_name]
-        return "___" + (mapped_normseg or "")
+        if mapped_normseg:
+            return ["___", mapped_normseg]
+        else:
+            return ["___"]
     else:
-        return f"(({full_case_name}))"
+        return [f"(({full_case_name}))"]
 
 
 def jnk_case(full_case_name):
     if full_case_name in CASE_ABBRV:
-        return CASE_ABBRV[full_case_name]
+        return [CASE_ABBRV[full_case_name]]
     else:
-        return f"(({full_case_name}))"
+        return [f"(({full_case_name}))"]
 
 
 DEFAULT_VERB_FEATS = {
@@ -66,6 +69,67 @@ def gen_verb_default_feats(token: UdMweToken) -> Optional[Set[str]]:
     return generate_dict(omor)
 
 
+def wildcard_feats_to_segs(feats: Dict[str, str], use_jnk: bool = False) -> List[str]:
+    if feats.get("VerbForm") == "Inf":
+        if feats.get("InfForm") == "1":
+            if len(feats) > 2:
+                # Log that we can't express all feats
+                return ["UNK"]
+            else:
+                return ["___", "da"]
+        elif feats.get("InfForm") == "3":
+            if "Case" in feats:
+                case = feats["Case"]
+                mapped_normseg = CASE_NORMSEG[case]
+                inf_segs = ["___", "ma"]
+                if mapped_normseg:
+                    inf_segs.extend(mapped_normseg[1:])
+                return inf_segs
+            else:
+                return ["UNK"]
+        else:
+            # Log that we can't express all feats
+            return ["UNK"]
+    elif feats.get("VerbForm") == "Part":
+        feats = feats.copy()
+        feats.pop("VerbForm", None)
+        tense = feats.pop("Tense", "Pres")
+        voice = feats.pop("Voice", "Act")
+        if len(feats):
+            # Log that we can't express all feats
+            return ["UNK"]
+        elif tense == "Pres" and voice == "Act":
+            return ["___", "va"]
+        elif tense == "Pres" and voice == "Pass":
+            return ["___", "tava"]
+        elif tense == "Past" and voice == "Act":
+            return ["___", "nut"]
+        elif tense == "Past" and voice == "Pass":
+            return ["___", "ttu"]
+        else:
+            assert False
+    elif "Case" in feats:
+        case = feats["Case"]
+        if len(feats) > 1:
+            # Log that we can't express all feats
+            return ["UNK"]
+        else:
+            if use_jnk:
+                return jnk_case(case)
+            else:
+                return gap_case(case)
+    elif not feats:
+        return ["___"]
+    else:
+        # Log that we can't express all feats here
+        return ["UNK"]
+
+
+def wildcard_feats_to_str(feats: Dict[str, str], use_jnk: bool = False) -> str:
+    segs = wildcard_feats_to_segs(feats)
+    return segs[0] + "".join("-" + seg for seg in segs[1:])
+
+
 def gapped_mwe_tok(
     token: UdMweToken, use_jnk: bool = False,
 ):
@@ -80,56 +144,8 @@ def gapped_mwe_tok(
                 return "/".join(generated)
         else:
             return token.payload
-    elif token.feats.get("VerbForm") == "Inf":
-        if token.feats.get("InfForm") == "1":
-            if len(token.feats) > 2:
-                # Log that we can't express all feats
-                return "UNK"
-            else:
-                return "___-da"
-        elif token.feats.get("InfForm") == "3":
-            if "Case" in token.feats:
-                case = token.feats["Case"]
-                mapped_normseg = CASE_NORMSEG[case]
-                return "___-ma" + (mapped_normseg[1:] if mapped_normseg else "")
-            else:
-                return "UNK"
-        else:
-            # Log that we can't express all feats
-            return "UNK"
-    elif token.feats.get("VerbForm") == "Part":
-        feats = token.feats.copy()
-        feats.pop("VerbForm", None)
-        tense = feats.pop("Tense", "Pres")
-        voice = feats.pop("Voice", "Act")
-        if len(feats):
-            # Log that we can't express all feats
-            return "UNK"
-        elif tense == "Pres" and voice == "Act":
-            return "___-va"
-        elif tense == "Pres" and voice == "Pass":
-            return "___-tava"
-        elif tense == "Past" and voice == "Act":
-            return "___-nut"
-        elif tense == "Past" and voice == "Pass":
-            return "___-ttu"
-        else:
-            assert False
-    elif "Case" in token.feats:
-        case = token.feats["Case"]
-        if len(token.feats) > 1:
-            # Log that we can't express all feats
-            return "UNK"
-        else:
-            if use_jnk:
-                return jnk_case(case)
-            else:
-                return gap_case(case)
-    elif not token.feats:
-        return "___"
     else:
-        # Log that we can't express all feats here
-        return "UNK"
+        return wildcard_feats_to_str(token.feats, use_jnk)
 
 
 def gapped_mwe(
